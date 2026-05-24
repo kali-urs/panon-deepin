@@ -29,6 +29,7 @@ jobs:
             qt6-base-dev \
             libpulse-dev \
             dde-dock-dev \
+            libdtkgui-dev \
             build-essential \
             lintian \
             fakeroot \
@@ -77,6 +78,7 @@ jobs:
             qt6-base-dev \
             libpulse-dev \
             dde-dock-dev \
+            libdtkgui-dev \
             build-essential \
             fakeroot \
             debhelper-compat
