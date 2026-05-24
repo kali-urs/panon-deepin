@@ -11,7 +11,11 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(PULSEAUDIO REQUIRED libpulse libpulse-simple)
 pkg_check_modules(DDE_DOCK REQUIRED dde-dock)
 
-# dtkgui may be named differently across Deepin versions
+# Find DGuiApplicationHelper header from dtk (needed by dde-dock pluginsiteminterface.h)
+# Try multiple methods: pkg-config, CMake config, direct search
+set(NEEDED_HEADER DGuiApplicationHelper)
+
+# Method 1: pkg-config
 pkg_check_modules(DTK dtkgui QUIET)
 if(NOT DTK_FOUND)
     pkg_check_modules(DTK dtk6gui QUIET)
@@ -22,14 +26,46 @@ endif()
 if(NOT DTK_FOUND)
     pkg_check_modules(DTK Dtk6Gui QUIET)
 endif()
+
+# Method 2: CMake config
 if(NOT DTK_FOUND)
-    find_path(DGuiApplicationHelper_INCLUDE_DIR
-        NAMES DGuiApplicationHelper
-        PATHS /usr/include /usr/include/libdtk-6.0.0 /usr/include/libdtk-5.6.0
-    )
-    if(DGuiApplicationHelper_INCLUDE_DIR)
-        set(DTK_INCLUDE_DIRS ${DGuiApplicationHelper_INCLUDE_DIR})
+    find_package(DtkGui QUIET)
+    if(DtkGui_FOUND)
+        # Use the CMake target instead of raw directories
+        set(DTK_FOUND TRUE)
+        set(DTK_USING_CMAKE_TARGET TRUE)
     endif()
+endif()
+if(NOT DTK_FOUND)
+    find_package(Dtk6Gui QUIET)
+    if(Dtk6Gui_FOUND)
+        set(DTK_FOUND TRUE)
+        set(DTK_USING_CMAKE_TARGET TRUE)
+    endif()
+endif()
+
+# Method 3: Direct header search (last resort)
+if(NOT DTK_FOUND OR NOT DTK_INCLUDE_DIRS)
+    find_path(DTK_HEADER_DIR
+        NAMES ${NEEDED_HEADER}
+        PATHS
+            /usr/include
+            /usr/include/libdtk-6.0.0
+            /usr/include/libdtk-5.6.0
+            /usr/include/DtkGui
+            /usr/include/Dtk6Gui
+            /usr/include/dtk6
+            /usr/include/Deepin
+            /usr/lib/x86_64-linux-gnu/cmake/DtkGui
+    )
+    if(DTK_HEADER_DIR)
+        set(DTK_INCLUDE_DIRS ${DTK_HEADER_DIR})
+        set(DTK_FOUND TRUE)
+    endif()
+endif()
+
+if(NOT DTK_FOUND)
+    message(WARNING "DGuiApplicationHelper header not found; plugin may not compile")
 endif()
 
 add_library(panon MODULE
@@ -52,12 +88,21 @@ target_include_directories(panon PRIVATE
     ${DTK_INCLUDE_DIRS}
 )
 
-target_link_libraries(panon PRIVATE
-    Qt6::Core
-    Qt6::Widgets
-    ${PULSEAUDIO_LIBRARIES}
-    ${DTK_LIBRARIES}
-)
+if(DTK_USING_CMAKE_TARGET)
+    target_link_libraries(panon PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        ${PULSEAUDIO_LIBRARIES}
+        DtkGui::DtkGui
+    )
+else()
+    target_link_libraries(panon PRIVATE
+        Qt6::Core
+        Qt6::Widgets
+        ${PULSEAUDIO_LIBRARIES}
+        ${DTK_LIBRARIES}
+    )
+endif()
 
 install(TARGETS panon LIBRARY DESTINATION /usr/lib/dde-dock/plugins/)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/panon.json DESTINATION /usr/lib/dde-dock/plugins/)

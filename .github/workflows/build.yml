@@ -36,13 +36,32 @@ jobs:
             debhelper-compat
           rm -rf /var/lib/apt/lists/*
 
+      - name: Debug DTK6 and environment
+        run: |
+          echo "=== Installed dtk packages ==="
+          dpkg -l | grep -i dtk || true
+          echo "=== DGuiApplicationHelper ==="
+          find /usr -name "DGuiApplicationHelper" 2>/dev/null || echo "NOT FOUND"
+          find /usr -name "*DGuiApplicationHelper*" 2>/dev/null || echo "NOT FOUND"
+          echo "=== pkg-config dtk ==="
+          pkg-config --list-all 2>/dev/null | grep -i dtk || echo "NONE"
+          echo "=== CMake modules ==="
+          ls /usr/lib/x86_64-linux-gnu/cmake/ | grep -i dtk || echo "NONE"
+          ls /usr/lib/cmake/ | grep -i dtk || echo "NONE"
+          echo "=== dpkg -L libdtk6gui-dev ==="
+          dpkg -L libdtk6gui-dev 2>/dev/null || echo "Package not installed"
+          echo "=== apt-cache search dtk ==="
+          apt-cache search dtk6 2>/dev/null || echo "apt-cache failed"
+          apt-cache search dtkgui 2>/dev/null || echo "apt-cache failed"
+
       - name: Build plugin
         run: |
           mkdir -p build
           cd build
           cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_VERBOSE_MAKEFILE=ON
           cmake --build . -j$(nproc)
 
       - name: Check .so
