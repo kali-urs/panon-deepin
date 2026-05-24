@@ -25,7 +25,7 @@ jobs:
           apt-get update
           apt-get install -y \
             cmake pkg-config qt6-base-dev libpulse-dev \
-            dde-dock-dev libdtk6gui-dev \
+            dde-dock-dev \
             build-essential fakeroot debhelper-compat
           rm -rf /var/lib/apt/lists/*
 
