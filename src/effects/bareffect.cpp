@@ -21,7 +21,7 @@ void BarEffect::render(QPainter &p, const QRectF &rect,
         return;
     }
 
-    int n = std::min(m_barCount, spectrum.size());
+    int n = std::min(m_barCount, static_cast<int>(spectrum.size()));
     if (m_peakHold.size() != n) {
         m_peakHold = QVector<double>(n, 0.0);
     }

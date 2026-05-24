@@ -201,13 +201,13 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
 
     QVector<double> smoothed(rawMagnitudes.size());
     const int barCount = 32;
-    int binSize = std::max(1, rawMagnitudes.size() / barCount);
+    int binSize = std::max(1, static_cast<int>(rawMagnitudes.size()) / barCount);
 
     for (int i = 0; i < barCount; ++i) {
         double sum = 0;
         int count = 0;
         int start = i * binSize;
-        int end = std::min(start + binSize, rawMagnitudes.size());
+        int end = std::min(start + binSize, static_cast<int>(rawMagnitudes.size()));
         for (int j = start; j < end; ++j) {
             sum += rawMagnitudes[j];
             count++;
