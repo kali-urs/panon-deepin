@@ -10,8 +10,6 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
                          const QVector<double> &,
                          bool vertical)
 {
-    p.fillRect(rect, QColor(0, 0, 0, 40));
-
     if (spectrum.isEmpty()) {
         p.setPen(QColor(100, 100, 100));
         p.drawText(rect, Qt::AlignCenter, "No audio");

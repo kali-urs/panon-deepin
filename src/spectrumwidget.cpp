@@ -14,6 +14,8 @@ SpectrumWidget::SpectrumWidget(QWidget *parent)
 {
     setMinimumSize(20, 20);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setAutoFillBackground(false);
     initEffects();
 }
 

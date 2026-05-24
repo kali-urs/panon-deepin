@@ -10,8 +10,6 @@ void WaveEffect::render(QPainter &p, const QRectF &rect,
                          const QVector<double> &waveform,
                          bool vertical)
 {
-    p.fillRect(rect, QColor(0, 0, 0, 40));
-
     const QVector<double> &data = waveform.isEmpty() ? spectrum : waveform;
     if (data.size() < 2) {
         p.setPen(QColor(100, 100, 100));

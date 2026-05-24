@@ -11,34 +11,6 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPixmap>
-#include <QVBoxLayout>
-
-
-TrayIcon::TrayIcon(QWidget *parent)
-    : QWidget(parent)
-{
-    setFixedSize(26, 26);
-}
-
-void TrayIcon::paintEvent(QPaintEvent *)
-{
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-
-    QColor bg = palette().window().color();
-    p.setBrush(bg);
-    p.setPen(Qt::NoPen);
-    p.drawRoundedRect(rect(), 4, 4);
-
-    double h = rect().height() * 0.7 * m_level;
-    double w = rect().width() * 0.5;
-    double x = (rect().width() - w) / 2;
-    double y = rect().height() - h;
-
-    QColor barColor(0, 180, 255, 200);
-    p.setBrush(barColor);
-    p.drawRoundedRect(QRectF(x, y, w, h), 2, 2);
-}
 
 
 PanonPlugin::PanonPlugin(QObject *parent)
@@ -64,6 +36,14 @@ const QString PanonPlugin::pluginDisplayName() const
     return "Panon Audio Visualizer";
 }
 
+void PanonPlugin::setWidth(int w)
+{
+    m_width = std::clamp(w, 50, 600);
+    m_widget->setFixedWidth(m_width);
+    if (m_proxyInter)
+        m_proxyInter->itemUpdate(this, pluginName());
+}
+
 void PanonPlugin::init(PluginProxyInterface *proxyInter)
 {
     m_proxyInter = proxyInter;
@@ -73,9 +53,6 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 
     m_widget = new SpectrumWidget;
     m_widget->setBarCount(32);
-    m_widget->setFixedSize(300, 200);
-
-    m_trayIcon = new TrayIcon;
 
     m_audioSource = new AudioSource(this);
 
@@ -96,13 +73,13 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 QWidget *PanonPlugin::itemWidget(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    return m_trayIcon;
+    return m_widget;
 }
 
 QWidget *PanonPlugin::itemTipsWidget(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    auto *label = new QLabel("Panon Audio Visualizer\nClick to open visualizer");
+    auto *label = new QLabel("Panon Audio Visualizer");
     label->setStyleSheet("padding: 8px;");
     return label;
 }
@@ -110,7 +87,7 @@ QWidget *PanonPlugin::itemTipsWidget(const QString &itemKey)
 QWidget *PanonPlugin::itemPopupApplet(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    return m_widget;
+    return nullptr;
 }
 
 const QString PanonPlugin::itemContextMenu(const QString &itemKey)
@@ -135,6 +112,21 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
         QJsonObject sub;
         sub["itemId"] = QString("effect_%1").arg(i);
         sub["itemText"] = (i == m_widget->effectIndex() ? "✓ " : "") + m_widget->effectName(i);
+        sub["isActive"] = true;
+        items.append(sub);
+    }
+
+    QJsonObject widthHeader;
+    widthHeader["itemId"] = "width_header";
+    widthHeader["itemText"] = "[Width]";
+    widthHeader["isActive"] = false;
+    items.append(widthHeader);
+
+    QList<int> widths = {100, 150, 200, 250, 300, 400};
+    for (int w : widths) {
+        QJsonObject sub;
+        sub["itemId"] = QString("width_%1").arg(w);
+        sub["itemText"] = (w == m_width ? "✓ " : "") + QString("%1px").arg(w);
         sub["isActive"] = true;
         items.append(sub);
     }
@@ -165,6 +157,10 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         bool ok = false;
         int idx = QStringView(menuId).sliced(7).toInt(&ok);
         if (ok) m_widget->setEffect(idx);
+    } else if (menuId.startsWith("width_")) {
+        bool ok = false;
+        int w = QStringView(menuId).sliced(6).toInt(&ok);
+        if (ok) setWidth(w);
     }
 }
 
@@ -184,12 +180,6 @@ void PanonPlugin::updateOrientation()
 void PanonPlugin::onWaveformReady(const QVector<double> &waveform)
 {
     m_widget->updateWaveform(waveform);
-
-    double level = 0;
-    for (double s : waveform)
-        level += std::abs(s);
-    level = std::clamp(level / waveform.size() * 3.0, 0.0, 1.0);
-    m_trayIcon->setLevel(level);
 }
 
 void PanonPlugin::onSamplesReady(const QVector<double> &samples)
