@@ -9,4 +9,4 @@ override_dh_auto_configure:
 		-DCMAKE_BUILD_TYPE=Release
 
 override_dh_shlibdeps:
-	dh_shlibdep --dpkg-shlibdeps-params=--ignore-missing-info
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
