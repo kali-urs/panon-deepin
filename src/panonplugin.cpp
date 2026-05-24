@@ -63,10 +63,12 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
             this, &PanonPlugin::onWaveformReady);
 
     if (m_audioSource->startCapture()) {
-        qDebug() << "Panon: audio capture started";
+        qDebug() << "Panon: audio capture started, source:" << m_audioSource->currentSource();
     } else {
         qWarning() << "Panon: failed to start audio capture";
     }
+
+    qDebug() << "Panon: available monitor sources:" << AudioSource::listMonitorSources();
 
     m_proxyInter->itemAdded(this, pluginName());
 }
@@ -132,6 +134,35 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
         items.append(sub);
     }
 
+    QJsonObject srcHeader;
+    srcHeader["itemId"] = "src_header";
+    srcHeader["itemText"] = "[Audio Source]";
+    srcHeader["isActive"] = false;
+    items.append(srcHeader);
+
+    QString curSrc = m_audioSource->currentSource();
+    QStringList srcWithState = AudioSource::listMonitorSourcesWithState();
+    if (srcWithState.isEmpty()) {
+        QJsonObject sub;
+        sub["itemId"] = "no_sources";
+        sub["itemText"] = "(no monitor sources)";
+        sub["isActive"] = false;
+        items.append(sub);
+    } else {
+        for (const QString &entry : srcWithState) {
+            QStringList parts = entry.split('\t');
+            if (parts.size() < 2) continue;
+            QString name = parts[0];
+            QString state = parts[1];
+            bool isCurrent = (name == curSrc);
+            QJsonObject sub;
+            sub["itemId"] = "source_" + name;
+            sub["itemText"] = (isCurrent ? "✓ " : "") + name + "  [" + state + "]";
+            sub["isActive"] = true;
+            items.append(sub);
+        }
+    }
+
     QJsonObject quitItem;
     quitItem["itemId"] = "quit";
     quitItem["itemText"] = "Quit";
@@ -162,6 +193,12 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         bool ok = false;
         int w = QStringView(menuId).sliced(6).toInt(&ok);
         if (ok) setWidth(w);
+    } else if (menuId.startsWith("source_")) {
+        QString srcName = menuId.sliced(7);
+        if (srcName != m_audioSource->currentSource()) {
+            qDebug() << "Panon: switching audio source to:" << srcName;
+            m_audioSource->switchSource(srcName);
+        }
     }
 }
 
@@ -194,8 +231,6 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
         qDebug() << "Panon: audio level =" << maxSample;
     }
 
-    if (maxSample < 1e-10) return;
-
     QVector<double> windowed = samples;
     FFTProcessor::applyHanningWindow(windowed);
 
@@ -225,7 +260,9 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
     }
 
     if (frameCount <= 10) {
-        qDebug() << "Panon: first FFT values:" << smoothed.mid(0, 8);
+        qDebug() << "Panon: first FFT values (8 bars):" << smoothed.mid(0, 8)
+                 << "raw max magnitude:" << *std::max_element(rawMagnitudes.begin(), rawMagnitudes.end())
+                 << "audio level:" << maxSample;
     }
 
     m_widget->updateSpectrum(smoothed);

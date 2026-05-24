@@ -22,6 +22,11 @@ public:
     int sampleRate() const { return m_sampleRate; }
     int bufferSize() const { return m_bufferSize; }
 
+    QString currentSource() const { return m_sourceName; }
+    static QStringList listMonitorSources();
+    static QStringList listMonitorSourcesWithState();
+    bool switchSource(const QString &name);
+
 signals:
     void samplesReady(const QVector<double> &samples);
     void waveformReady(const QVector<double> &waveform);

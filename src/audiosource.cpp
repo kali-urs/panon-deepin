@@ -13,12 +13,51 @@ AudioSource::~AudioSource()
     stopCapture();
 }
 
+QStringList AudioSource::listMonitorSources()
+{
+    QStringList result;
+    QProcess proc;
+    proc.start("pactl", {"list", "sources", "short"});
+    proc.waitForFinished(3000);
+    QString info = proc.readAllStandardOutput();
+
+    for (const QString &line : info.split('\n')) {
+        QStringList cols = line.split('\t');
+        if (cols.size() < 5) continue;
+        QString name = cols[1].trimmed();
+        if (!name.endsWith(".monitor")) continue;
+        result << name;
+    }
+    return result;
+}
+
+QStringList AudioSource::listMonitorSourcesWithState()
+{
+    QStringList result;
+    QProcess proc;
+    proc.start("pactl", {"list", "sources", "short"});
+    proc.waitForFinished(3000);
+    QString info = proc.readAllStandardOutput();
+
+    for (const QString &line : info.split('\n')) {
+        QStringList cols = line.split('\t');
+        if (cols.size() < 5) continue;
+        QString name = cols[1].trimmed();
+        if (!name.endsWith(".monitor")) continue;
+        QString state = cols[4].trimmed();
+        result << name + "\t" + state;
+    }
+    return result;
+}
+
 QString AudioSource::findMonitorSourceName()
 {
     QProcess proc;
     proc.start("pactl", {"list", "sources", "short"});
     proc.waitForFinished(3000);
     QString info = proc.readAllStandardOutput();
+
+    qDebug() << "AudioSource: all sources output:" << info.trimmed();
 
     QString runningMonitor;
     QString anyMonitor;
@@ -35,11 +74,34 @@ QString AudioSource::findMonitorSourceName()
         }
     }
 
-    if (!runningMonitor.isEmpty())
+    if (!runningMonitor.isEmpty()) {
+        qDebug() << "AudioSource: found RUNNING monitor:" << runningMonitor;
         return runningMonitor;
-    if (!anyMonitor.isEmpty())
+    }
+    if (!anyMonitor.isEmpty()) {
+        qDebug() << "AudioSource: no RUNNING monitor, using:" << anyMonitor;
         return anyMonitor;
+    }
 
+    qWarning() << "AudioSource: no .monitor source found, trying default-sink monitor";
+
+    QProcess proc2;
+    proc2.start("pactl", {"info"});
+    proc2.waitForFinished(3000);
+    QString info2 = proc2.readAllStandardOutput();
+    qDebug() << "AudioSource: pactl info output:" << info2.trimmed();
+    for (const QString &line : info2.split('\n')) {
+        if (line.startsWith("Default Sink:")) {
+            QString defaultSink = line.mid(QString("Default Sink:").length()).trimmed();
+            if (!defaultSink.isEmpty()) {
+                QString monitorName = defaultSink + ".monitor";
+                qDebug() << "AudioSource: trying default sink monitor:" << monitorName;
+                return monitorName;
+            }
+        }
+    }
+
+    qWarning() << "AudioSource: falling back to auto_null.monitor";
     return "auto_null.monitor";
 }
 
@@ -94,6 +156,13 @@ void AudioSource::stopCapture()
         pa_simple_free(m_paSimple);
         m_paSimple = nullptr;
     }
+}
+
+bool AudioSource::switchSource(const QString &name)
+{
+    stopCapture();
+    m_sourceName = name;
+    return startCapture();
 }
 
 void AudioSource::run()
