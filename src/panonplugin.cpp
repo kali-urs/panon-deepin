@@ -216,7 +216,7 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
         val = std::log10(1.0 + val * 50) / 2.0;
 
         if (i < m_lastMagnitudes.size()) {
-            val = val * 0.4 + m_lastMagnitudes[i] * 0.6;
+            val = val * 0.7 + m_lastMagnitudes[i] * 0.3;
         }
 
         smoothed[i] = val;

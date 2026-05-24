@@ -21,7 +21,7 @@ public:
 private:
     int m_barCount = 32;
     QVector<double> m_peakHold;
-    double m_decayRate = 0.92;
+    double m_decayRate = 0.85;
 };
 
 #endif
