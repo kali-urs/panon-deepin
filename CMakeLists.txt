@@ -37,4 +37,4 @@ target_link_libraries(panon PRIVATE
 )
 
 install(TARGETS panon LIBRARY DESTINATION /usr/lib/dde-dock/plugins/)
-install(FILES panon.json DESTINATION /usr/lib/dde-dock/plugins/)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/panon.json DESTINATION /usr/lib/dde-dock/plugins/)
