@@ -8,6 +8,19 @@
 class SpectrumWidget;
 class AudioSource;
 class FFTProcessor;
+class QLabel;
+
+class TrayIcon : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit TrayIcon(QWidget *parent = nullptr);
+    void setLevel(double level) { m_level = level; update(); }
+protected:
+    void paintEvent(QPaintEvent *event) override;
+private:
+    double m_level = 0;
+};
 
 class PanonPlugin : public QObject, PluginsItemInterface
 {
@@ -37,6 +50,7 @@ private:
     void onWaveformReady(const QVector<double> &waveform);
     void updateOrientation();
 
+    TrayIcon *m_trayIcon = nullptr;
     SpectrumWidget *m_widget = nullptr;
     AudioSource *m_audioSource = nullptr;
     FFTProcessor *m_fft = nullptr;

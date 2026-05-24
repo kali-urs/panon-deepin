@@ -11,6 +11,34 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPixmap>
+#include <QVBoxLayout>
+
+
+TrayIcon::TrayIcon(QWidget *parent)
+    : QWidget(parent)
+{
+    setFixedSize(26, 26);
+}
+
+void TrayIcon::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    QColor bg = palette().window().color();
+    p.setBrush(bg);
+    p.setPen(Qt::NoPen);
+    p.drawRoundedRect(rect(), 4, 4);
+
+    double h = rect().height() * 0.7 * m_level;
+    double w = rect().width() * 0.5;
+    double x = (rect().width() - w) / 2;
+    double y = rect().height() - h;
+
+    QColor barColor(0, 180, 255, 200);
+    p.setBrush(barColor);
+    p.drawRoundedRect(QRectF(x, y, w, h), 2, 2);
+}
 
 
 PanonPlugin::PanonPlugin(QObject *parent)
@@ -45,6 +73,9 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 
     m_widget = new SpectrumWidget;
     m_widget->setBarCount(32);
+    m_widget->setFixedSize(300, 200);
+
+    m_trayIcon = new TrayIcon;
 
     m_audioSource = new AudioSource(this);
 
@@ -65,13 +96,13 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 QWidget *PanonPlugin::itemWidget(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    return m_widget;
+    return m_trayIcon;
 }
 
 QWidget *PanonPlugin::itemTipsWidget(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    auto *label = new QLabel("Panon Audio Visualizer\nClick to pause/resume");
+    auto *label = new QLabel("Panon Audio Visualizer\nClick to open visualizer");
     label->setStyleSheet("padding: 8px;");
     return label;
 }
@@ -79,10 +110,7 @@ QWidget *PanonPlugin::itemTipsWidget(const QString &itemKey)
 QWidget *PanonPlugin::itemPopupApplet(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    auto *label = new QLabel(m_paused ? "Paused" : "Listening...");
-    label->setAlignment(Qt::AlignCenter);
-    label->setStyleSheet("padding: 20px; font-size: 14px;");
-    return label;
+    return m_widget;
 }
 
 const QString PanonPlugin::itemContextMenu(const QString &itemKey)
@@ -156,6 +184,12 @@ void PanonPlugin::updateOrientation()
 void PanonPlugin::onWaveformReady(const QVector<double> &waveform)
 {
     m_widget->updateWaveform(waveform);
+
+    double level = 0;
+    for (double s : waveform)
+        level += std::abs(s);
+    level = std::clamp(level / waveform.size() * 3.0, 0.0, 1.0);
+    m_trayIcon->setLevel(level);
 }
 
 void PanonPlugin::onSamplesReady(const QVector<double> &samples)
