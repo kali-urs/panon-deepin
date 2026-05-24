@@ -186,11 +186,15 @@ void PanonPlugin::onWaveformReady(const QVector<double> &waveform)
 void PanonPlugin::onSamplesReady(const QVector<double> &samples)
 {
     static int frameCount = 0;
-    if (++frameCount % 50 == 0) {
-        double maxVal = 0;
-        for (double s : samples) maxVal = std::max(maxVal, std::abs(s));
-        qDebug() << "Panon: audio level =" << maxVal;
+    ++frameCount;
+    double maxSample = 0;
+    for (double s : samples) maxSample = std::max(maxSample, std::abs(s));
+
+    if (frameCount % 50 == 0) {
+        qDebug() << "Panon: audio level =" << maxSample;
     }
+
+    if (maxSample < 1e-10) return;
 
     QVector<double> windowed = samples;
     FFTProcessor::applyHanningWindow(windowed);
@@ -199,9 +203,10 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
     m_fft->process(windowed, rawMagnitudes);
 
     int magSize = rawMagnitudes.size();
-    QVector<double> smoothed(magSize);
     const int barCount = 32;
     int binSize = qMax(1, magSize / barCount);
+
+    QVector<double> smoothed(barCount);
 
     for (int i = 0; i < barCount; ++i) {
         double sum = 0;
@@ -213,17 +218,16 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
             count++;
         }
         double val = count > 0 ? sum / count : 0;
-        val = val * 20.0;
-        val = std::sqrt(std::clamp(val, 0.0, 1.0));
-
-        if (i < m_lastMagnitudes.size()) {
-            val = val * 0.85 + m_lastMagnitudes[i] * 0.15;
-        }
+        val = std::sqrt(std::clamp(val * 200.0, 0.0, 1.0));
+        if (val < 0.03) val = 0.03;
 
         smoothed[i] = val;
     }
 
-    m_lastMagnitudes = smoothed;
+    if (frameCount <= 10) {
+        qDebug() << "Panon: first FFT values:" << smoothed.mid(0, 8);
+    }
+
     m_widget->updateSpectrum(smoothed);
 
     if (m_proxyInter) {
