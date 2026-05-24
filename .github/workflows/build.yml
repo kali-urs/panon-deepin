@@ -40,19 +40,38 @@ jobs:
         run: |
           echo "=== Installed dtk packages ==="
           dpkg -l | grep -i dtk || true
-          echo "=== DGuiApplicationHelper ==="
-          find /usr -name "DGuiApplicationHelper" 2>/dev/null || echo "NOT FOUND"
-          find /usr -name "*DGuiApplicationHelper*" 2>/dev/null || echo "NOT FOUND"
           echo "=== pkg-config dtk ==="
           pkg-config --list-all 2>/dev/null | grep -i dtk || echo "NONE"
-          echo "=== CMake modules ==="
-          ls /usr/lib/x86_64-linux-gnu/cmake/ | grep -i dtk || echo "NONE"
-          ls /usr/lib/cmake/ | grep -i dtk || echo "NONE"
+          echo "=== dpkg -L dde-dock-dev ==="
+          dpkg -L dde-dock-dev 2>/dev/null || echo "Package not installed"
           echo "=== dpkg -L libdtk6gui-dev ==="
           dpkg -L libdtk6gui-dev 2>/dev/null || echo "Package not installed"
-          echo "=== apt-cache search dtk ==="
-          apt-cache search dtk6 2>/dev/null || echo "apt-cache failed"
-          apt-cache search dtkgui 2>/dev/null || echo "apt-cache failed"
+          echo "=== pkg-config dtk6gui --cflags ==="
+          pkg-config dtk6gui --cflags 2>/dev/null || echo "dtk6gui.pc not found"
+          echo "=== pkg-config dde-dock --cflags ==="
+          pkg-config dde-dock --cflags 2>/dev/null || echo "dde-dock.pc not found"
+          echo "=== DGuiApplicationHelper ==="
+          find /usr -name "DGuiApplicationHelper" -o -name "DGuiApplicationHelper.h" 2>/dev/null
+          echo "=== dde-dock header ==="
+          find /usr -name "pluginsiteminterface.h" 2>/dev/null
+          echo "=== Compile test: does #include work? ==="
+          cat > /tmp/test_include.cpp << 'EOF'
+          #include <QObject>
+          #include <pluginsiteminterface.h>
+          PluginFlags testFlags() { return PluginFlag::Type_Common; }
+          int main() { return 0; }
+          EOF
+          c++ -std=gnu++17 -c /tmp/test_include.cpp \
+            -I/usr/include/dde-dock -I/usr/include/dtk6/DGui \
+            -I/usr/include/dtk6/DCore -I/usr/include/dtk6/DLog \
+            -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore \
+            -isystem /usr/include/x86_64-linux-gnu/qt6 \
+            -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ \
+            -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets \
+            -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui \
+            -o /tmp/test_include.o 2>&1 || true
+          echo "=== Check dde-dock pc file ==="
+          cat /usr/lib/x86_64-linux-gnu/pkgconfig/dde-dock.pc 2>/dev/null || true
 
       - name: Build plugin
         run: |
