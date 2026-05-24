@@ -6,30 +6,32 @@
 BeamEffect::BeamEffect() = default;
 
 void BeamEffect::render(QPainter &p, const QRectF &rect,
-                         const QVector<double> &spectrum,
-                         const QVector<double> &,
-                         bool vertical)
+                          const QVector<double> &spectrum,
+                          const QVector<double> &,
+                          bool vertical)
 {
+    p.fillRect(rect, QColor(13, 13, 26, 200));
+
     if (spectrum.isEmpty()) {
-        p.setPen(QColor(100, 100, 100));
+        p.setPen(QColor(100, 100, 120));
         p.drawText(rect, Qt::AlignCenter, "No audio");
         return;
     }
 
     double w = rect.width();
     double h = rect.height();
-    int n = spectrum.size();
+    int n = std::min(128, static_cast<int>(spectrum.size()));
 
     QPainterPath fillPath;
     QPainterPath linePath;
 
     if (vertical) {
         double step = h / n;
-        double baseX = w;
-        fillPath.moveTo(baseX, 0);
+        fillPath.moveTo(w, 0);
         for (int i = 0; i < n; ++i) {
-            double val = std::clamp(spectrum[i], 0.0, 1.0);
-            double x = w - val * w * 0.9;
+            int idx = (i * spectrum.size()) / n;
+            double val = std::clamp(spectrum[idx], 0.0, 1.0);
+            double x = w - val * val * w * 0.95;
             double y = i * step;
             if (i == 0) {
                 fillPath.lineTo(x, y);
@@ -43,12 +45,12 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
         fillPath.closeSubpath();
     } else {
         double step = w / n;
-        double baseY = h;
-        fillPath.moveTo(0, baseY);
+        fillPath.moveTo(0, h);
         for (int i = 0; i < n; ++i) {
-            double val = std::clamp(spectrum[i], 0.0, 1.0);
+            int idx = (i * spectrum.size()) / n;
+            double val = std::clamp(spectrum[idx], 0.0, 1.0);
             double x = i * step;
-            double y = h - val * h * 0.9;
+            double y = h - val * val * h * 0.95;
             if (i == 0) {
                 fillPath.lineTo(x, y);
                 linePath.moveTo(x, y);
@@ -61,15 +63,25 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
         fillPath.closeSubpath();
     }
 
-    QColor fill = lerpColor(0.5);
-    fill.setAlpha(60);
-    p.setBrush(fill);
+    QColor fillColor = lerpColor(0.4);
+    fillColor.setAlpha(40);
+    p.setBrush(fillColor);
     p.setPen(Qt::NoPen);
     p.drawPath(fillPath);
 
-    QColor line = lerpColor(0.7);
-    line.setAlpha(200);
-    p.setPen(QPen(line, 2));
+    QColor glowColor = lerpColor(0.6);
+    glowColor.setAlpha(25);
+    p.setPen(QPen(glowColor, 10));
     p.setBrush(Qt::NoBrush);
+    p.drawPath(linePath);
+
+    QColor lineColor = lerpColor(0.7);
+    lineColor.setAlpha(180);
+    p.setPen(QPen(lineColor, 2));
+    p.drawPath(linePath);
+
+    QColor brightLine = lerpColor(0.9);
+    brightLine.setAlpha(100);
+    p.setPen(QPen(brightLine, 1));
     p.drawPath(linePath);
 }
