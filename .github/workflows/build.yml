@@ -29,45 +29,10 @@ jobs:
             qt6-base-dev \
             libpulse-dev \
             dde-dock-dev \
-            libdtk6gui-dev \
             build-essential \
-            lintian \
             fakeroot \
             debhelper-compat
           rm -rf /var/lib/apt/lists/*
-
-      - name: Debug DTK6 and environment
-        run: |
-          echo "=== Installed packages with dde ==="
-          dpkg -l | grep -i dde || true
-          echo "=== Which package provides pluginsiteminterface.h ==="
-          dpkg -S /usr/include/dde-dock/pluginsiteminterface.h 2>/dev/null || echo "Not found in dpkg db"
-          echo "=== dde-dock header content (first 80 lines) ==="
-          head -80 /usr/include/dde-dock/pluginsiteminterface.h 2>/dev/null || echo "File not found"
-          echo "=== dde-dock.pc ==="
-          cat /usr/lib/x86_64-linux-gnu/pkgconfig/dde-dock.pc 2>/dev/null || echo "pc file not found"
-          echo "=== pkg-config dde-dock --cflags ==="
-          pkg-config dde-dock --cflags 2>/dev/null || echo "dde-dock.pc not found"
-          echo "=== Compile test with -E (preprocess only) ==="
-          cat > /tmp/test_e.cpp << 'EOF'
-          #include <pluginsiteminterface.h>
-          int main() { return 0; }
-          EOF
-          c++ -std=gnu++17 -E /tmp/test_e.cpp \
-            -I/usr/include/dde-dock -I/usr/include/dtk6/DGui \
-            -I/usr/include/dtk6/DCore -I/usr/include/dtk6/DLog \
-            -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore \
-            -isystem /usr/include/x86_64-linux-gnu/qt6 \
-            -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ \
-            -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets \
-            -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui \
-            -o /tmp/test_e_out.txt 2>&1 && echo "Preprocessing succeeded" || echo "Preprocessing failed"
-          echo "=== Full header content ==="
-          cat /usr/include/dde-dock/pluginsiteminterface.h
-          echo "=== Checking dtk availability ==="
-          dpkg -l | grep dtk6 || true
-          echo "=== dtk6gui.pc content ==="
-          cat /usr/lib/x86_64-linux-gnu/pkgconfig/dtk6gui.pc 2>/dev/null || echo "not found"
 
       - name: Build plugin
         run: |
@@ -75,8 +40,7 @@ jobs:
           cd build
           cmake .. \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_VERBOSE_MAKEFILE=ON
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build . -j$(nproc)
 
       - name: Check .so
@@ -112,7 +76,6 @@ jobs:
             qt6-base-dev \
             libpulse-dev \
             dde-dock-dev \
-            libdtk6gui-dev \
             build-essential \
             fakeroot \
             debhelper-compat

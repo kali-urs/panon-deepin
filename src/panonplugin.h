@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QtPlugin>
-#include <QIcon>
 #include <pluginsiteminterface.h>
 
 class SpectrumWidget;
@@ -14,7 +13,7 @@ class PanonPlugin : public QObject, PluginsItemInterface
 {
     Q_OBJECT
     Q_INTERFACES(PluginsItemInterface)
-    Q_PLUGIN_METADATA(IID "com.deepin.dock.PluginsItemInterface_2_0_0" FILE "panon.json")
+    Q_PLUGIN_METADATA(IID "com.deepin.dock.PluginsItemInterface" FILE "panon.json")
 
 public:
     explicit PanonPlugin(QObject *parent = nullptr);
@@ -28,15 +27,10 @@ public:
     QWidget *itemPopupApplet(const QString &itemKey) override;
     const QString itemContextMenu(const QString &itemKey) override;
     void invokedMenuItem(const QString &itemKey, const QString &menuId, const bool checked) override;
-    PluginFlags flags() const override;
     void positionChanged(const Dock::Position position) override;
 
     PluginType type() override { return Normal; }
     PluginSizePolicy pluginSizePolicy() const override { return System; }
-    PluginMode status() const override { return PluginMode::Active; }
-    QString description() const override { return "Audio spectrum visualizer for the dock"; }
-    QIcon icon(const DockPart &part, DGuiApplicationHelper::ColorType themeType) override;
-    bool eventHandler(QEvent *event) override;
 
 private:
     void onSamplesReady(const QVector<double> &samples);

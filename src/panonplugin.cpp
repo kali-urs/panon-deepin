@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QPixmap>
 
+
 PanonPlugin::PanonPlugin(QObject *parent)
     : QObject(parent)
 {
@@ -136,45 +137,13 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         bool ok = false;
         int idx = QStringView(menuId).sliced(7).toInt(&ok);
         if (ok) m_widget->setEffect(idx);
-        m_widget->setEffect(idx);
     }
-}
-
-PluginFlags PanonPlugin::flags() const
-{
-    return PluginFlag::Type_Common
-         | PluginFlag::Quick_Single
-         | PluginFlag::Attribute_CanDrag
-         | PluginFlag::Attribute_CanInsert
-         | PluginFlag::Attribute_CanSetting;
 }
 
 void PanonPlugin::positionChanged(const Dock::Position position)
 {
     Q_UNUSED(position);
     updateOrientation();
-}
-
-QIcon PanonPlugin::icon(const DockPart &part, DGuiApplicationHelper::ColorType themeType)
-{
-    Q_UNUSED(part);
-    Q_UNUSED(themeType);
-    QPixmap pix(24, 24);
-    pix.fill(Qt::transparent);
-    QPainter painter(&pix);
-    painter.setRenderHint(QPainter::Antialiasing);
-    QColor colors[] = {{0, 180, 255}, {0, 229, 255}, {255, 0, 128}, {255, 102, 0}};
-    for (int i = 0; i < 4; ++i) {
-        painter.fillRect(QRectF(2 + i * 6, 20 - (i + 1) * 4, 4, (i + 1) * 4), colors[i]);
-    }
-    painter.end();
-    return QIcon(pix);
-}
-
-bool PanonPlugin::eventHandler(QEvent *event)
-{
-    Q_UNUSED(event);
-    return false;
 }
 
 void PanonPlugin::updateOrientation()
@@ -199,15 +168,16 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
     QVector<double> rawMagnitudes;
     m_fft->process(windowed, rawMagnitudes);
 
-    QVector<double> smoothed(rawMagnitudes.size());
+    int magSize = rawMagnitudes.size();
+    QVector<double> smoothed(magSize);
     const int barCount = 32;
-    int binSize = std::max(1, static_cast<int>(rawMagnitudes.size()) / barCount);
+    int binSize = qMax(1, magSize / barCount);
 
     for (int i = 0; i < barCount; ++i) {
         double sum = 0;
         int count = 0;
         int start = i * binSize;
-        int end = std::min(start + binSize, static_cast<int>(rawMagnitudes.size()));
+        int end = qMin(start + binSize, magSize);
         for (int j = start; j < end; ++j) {
             sum += rawMagnitudes[j];
             count++;
