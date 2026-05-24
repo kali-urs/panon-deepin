@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: linuxdeepin/deepin:25
+      options: --user root
+
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            cmake \
+            pkg-config \
+            qt6-base-dev \
+            libpulse-dev \
+            dde-dock-dev \
+            build-essential \
+            lintian \
+            fakeroot \
+            debhelper-compat
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Build plugin
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
+
+      - name: Check .so
+        run: |
+          file build/libpanon.so
+          ldd build/libpanon.so
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libpanon.so
+          path: build/libpanon.so
+          compression-level: 0
+
+  package-deb:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: linuxdeepin/deepin:25
+      options: --user root
+
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            cmake \
+            pkg-config \
+            qt6-base-dev \
+            libpulse-dev \
+            dde-dock-dev \
+            build-essential \
+            fakeroot \
+            debhelper-compat
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Build .deb package
+        run: |
+          dpkg-buildpackage -b -us -uc --no-sign
+          mkdir -p deb-pkg
+          mv ../*.deb ../*.buildinfo ../*.changes deb-pkg/ 2>/dev/null || true
+
+      - name: List package
+        run: dpkg-deb --info deb-pkg/*.deb 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: deb-pkg/*.deb
+          compression-level: 0

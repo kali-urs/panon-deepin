@@ -1,0 +1,26 @@
+Source: dde-dock-panon
+Section: utils
+Priority: optional
+Maintainer: kali-urs <kali-urs@users.noreply.github.com>
+Build-Depends:
+ cmake,
+ pkg-config,
+ qt6-base-dev,
+ libpulse-dev,
+ dde-dock-dev,
+ debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Homepage: https://github.com/kali-urs/panon-deepin
+
+Package: dde-dock-panon
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ dde-dock (>= 6.0)
+Description: Audio spectrum visualizer plugin for Deepin 25 dock
+ A real-time audio spectrum analyzer plugin for the Deepin Desktop
+ Environment dock. Captures system audio via PulseAudio and renders
+ 6 visual effects: Bars, Wave, Solid, Beam, Hill, Spectrogram.
+ .
+ Reference: https://github.com/rbn42/panon

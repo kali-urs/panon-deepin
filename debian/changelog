@@ -1,0 +1,7 @@
+dde-dock-panon (1.0-1) unstable; urgency=medium
+
+  * Initial release for Deepin 25 (DDE 7.0).
+  * 6 visual effects: Bars, Wave, Solid, Beam, Hill, Spectrogram.
+  * Reference: rbn42/panon (KDE Plasma audio visualizer).
+
+ -- kali-urs <kali-urs@users.noreply.github.com>  Sun, 24 May 2026 00:00:00 +0800

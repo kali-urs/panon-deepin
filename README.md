@@ -1,5 +1,8 @@
 # Panon - Deepin 25 Dock Plugin
 
+[![Build](https://github.com/kali-urs/panon-deepin/actions/workflows/build.yml/badge.svg)](https://github.com/kali-urs/panon-deepin/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/kali-urs/panon-deepin)](https://github.com/kali-urs/panon-deepin/releases)
+
 音频频谱可视化 dock 插件，在 Deepin 25 DDE 7.0 任务栏上实时显示系统音频频谱。
 
 参考自 [rbn42/panon](https://github.com/rbn42/panon) —— 一个 KDE Plasma 音频可视化 Widget。
@@ -17,7 +20,25 @@
 | **Hill** | 高斯平滑"山丘"曲线 |
 | **Spectrogram** | 滚动频谱图 |
 
-## 构建
+## 下载
+
+从 [Releases](https://github.com/kali-urs/panon-deepin/releases) 页面下载最新版本。
+
+### deb 安装
+
+```bash
+sudo apt install ./dde-dock-panon_*.deb
+pkill dde-dock
+```
+
+### 手动安装
+
+```bash
+sudo cp libpanon.so /usr/lib/dde-dock/plugins/
+pkill dde-dock
+```
+
+## 从源码构建
 
 ```bash
 # 安装依赖
@@ -25,12 +46,23 @@ sudo apt install dde-dock-dev qt6-base-dev libpulse-dev cmake pkg-config
 
 # 构建
 mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
 
 # 安装
 sudo make install
 pkill dde-dock
+```
+
+## CI 在线构建
+
+每次 push 到 `main` 或 `v*` tag 时，GitHub Actions 自动在 Deepin 25 Docker 容器中编译并生成 `.so` 和 `.deb` 产物。
+
+tag 推送格式:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 ## 架构

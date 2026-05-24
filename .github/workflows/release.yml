@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container:
+      image: linuxdeepin/deepin:25
+      options: --user root
+
+    steps:
+      - name: Install git
+        run: apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y \
+            cmake pkg-config qt6-base-dev libpulse-dev \
+            dde-dock-dev build-essential fakeroot debhelper-compat
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Build .so
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
+          strip libpanon.so
+
+      - name: Build .deb
+        run: |
+          dpkg-buildpackage -b -us -uc --no-sign
+          mkdir -p release-artifacts
+          cp build/libpanon.so release-artifacts/
+          mv ../*.deb release-artifacts/ 2>/dev/null || true
+
+      - name: Create checksums
+        run: |
+          cd release-artifacts
+          sha256sum * > SHA256SUMS
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Panon ${{ github.ref_name }}
+          body: |
+            ## Panon ${{ github.ref_name }}
+
+            Audio spectrum visualizer dock plugin for Deepin 25.
+
+            ### Downloads
+            - `libpanon.so` — raw plugin shared library, copy to `/usr/lib/dde-dock/plugins/`
+            - `*.deb` — Debian package for easy installation
+
+            ### Install from .deb
+            ```bash
+            sudo apt install ./dde-dock-panon_*.deb
+            pkill dde-dock
+            ```
+
+            ### Install from .so
+            ```bash
+            sudo cp libpanon.so /usr/lib/dde-dock/plugins/
+            pkill dde-dock
+            ```
+          files: release-artifacts/*
