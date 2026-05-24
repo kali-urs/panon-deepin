@@ -62,11 +62,12 @@ jobs:
             -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets \
             -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui \
             -o /tmp/test_e_out.txt 2>&1 && echo "Preprocessing succeeded" || echo "Preprocessing failed"
-          echo "=== Looking for PluginFlag in preprocessed output ==="
-          grep -c "PluginFlag" /tmp/test_e_out.txt 2>/dev/null || echo "PluginFlag not found"
-          grep -c "Q_DECLARE_FLAGS" /tmp/test_e_out.txt 2>/dev/null || echo "Q_DECLARE_FLAGS not found"
-          echo "=== Total lines in preprocessed output ==="
-          wc -l /tmp/test_e_out.txt 2>/dev/null || echo "No output file"
+          echo "=== Full header content ==="
+          cat /usr/include/dde-dock/pluginsiteminterface.h
+          echo "=== Checking dtk availability ==="
+          dpkg -l | grep dtk6 || true
+          echo "=== dtk6gui.pc content ==="
+          cat /usr/lib/x86_64-linux-gnu/pkgconfig/dtk6gui.pc 2>/dev/null || echo "not found"
 
       - name: Build plugin
         run: |
