@@ -16,8 +16,7 @@ Package: dde-dock-panon
 Architecture: any
 Depends:
  ${shlibs:Depends},
- ${misc:Depends},
- dde-dock (>= 6.0)
+ ${misc:Depends}
 Description: Audio spectrum visualizer plugin for Deepin 25 dock
  A real-time audio spectrum analyzer plugin for the Deepin Desktop
  Environment dock. Captures system audio via PulseAudio and renders
