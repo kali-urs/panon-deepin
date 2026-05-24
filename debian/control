@@ -8,7 +8,7 @@ Build-Depends:
  qt6-base-dev,
  libpulse-dev,
  dde-dock-dev,
- libdtkgui-dev,
+ libdtk6gui-dev,
  debhelper-compat (= 13)
 Standards-Version: 4.6.2
 Homepage: https://github.com/kali-urs/panon-deepin
