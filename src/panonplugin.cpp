@@ -53,6 +53,7 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 
     m_widget = new SpectrumWidget;
     m_widget->setBarCount(32);
+    m_widget->setFixedWidth(m_width);
 
     m_audioSource = new AudioSource(this);
 
@@ -184,7 +185,12 @@ void PanonPlugin::onWaveformReady(const QVector<double> &waveform)
 
 void PanonPlugin::onSamplesReady(const QVector<double> &samples)
 {
-    if (m_paused) return;
+    static int frameCount = 0;
+    if (++frameCount % 50 == 0) {
+        double maxVal = 0;
+        for (double s : samples) maxVal = std::max(maxVal, std::abs(s));
+        qDebug() << "Panon: audio level =" << maxVal;
+    }
 
     QVector<double> windowed = samples;
     FFTProcessor::applyHanningWindow(windowed);
