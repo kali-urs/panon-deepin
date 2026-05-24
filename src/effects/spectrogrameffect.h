@@ -9,7 +9,7 @@
 class SpectrogramEffect : public VisualEffect
 {
 public:
-    explicit SpectrogramEffect(QObject *parent = nullptr);
+    explicit SpectrogramEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,
