@@ -1,17 +1,15 @@
 #ifndef VISUALEFFECT_H
 #define VISUALEFFECT_H
 
-#include <QObject>
 #include <QVector>
 #include <QColor>
 #include <QPainter>
 #include <QString>
 
-class VisualEffect : public QObject
+class VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit VisualEffect(QObject *parent = nullptr) : QObject(parent) {}
+    VisualEffect() = default;
     virtual ~VisualEffect() = default;
 
     virtual void render(QPainter &p, const QRectF &rect,

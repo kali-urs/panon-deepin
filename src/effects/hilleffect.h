@@ -5,9 +5,8 @@
 
 class HillEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit HillEffect(QObject *parent = nullptr);
+    explicit HillEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,

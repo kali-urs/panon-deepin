@@ -5,9 +5,8 @@
 
 class SolidEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit SolidEffect(QObject *parent = nullptr);
+    explicit SolidEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,

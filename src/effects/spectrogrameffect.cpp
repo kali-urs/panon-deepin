@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-SpectrogramEffect::SpectrogramEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+SpectrogramEffect::SpectrogramEffect() = default;
 
 void SpectrogramEffect::reset()
 {

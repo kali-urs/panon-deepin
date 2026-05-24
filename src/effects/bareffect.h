@@ -5,9 +5,8 @@
 
 class BarEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit BarEffect(QObject *parent = nullptr);
+    explicit BarEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,

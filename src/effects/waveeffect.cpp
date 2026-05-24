@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-WaveEffect::WaveEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+WaveEffect::WaveEffect() = default;
 
 void WaveEffect::render(QPainter &p, const QRectF &rect,
                          const QVector<double> &spectrum,

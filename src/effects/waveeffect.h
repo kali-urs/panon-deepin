@@ -5,9 +5,8 @@
 
 class WaveEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit WaveEffect(QObject *parent = nullptr);
+    explicit WaveEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,

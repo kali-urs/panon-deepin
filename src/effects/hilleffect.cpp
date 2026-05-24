@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-HillEffect::HillEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+HillEffect::HillEffect() = default;
 
 void HillEffect::render(QPainter &p, const QRectF &rect,
                          const QVector<double> &spectrum,

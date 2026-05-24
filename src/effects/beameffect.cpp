@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-BeamEffect::BeamEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+BeamEffect::BeamEffect() = default;
 
 void BeamEffect::render(QPainter &p, const QRectF &rect,
                          const QVector<double> &spectrum,

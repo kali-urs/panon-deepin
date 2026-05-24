@@ -5,9 +5,8 @@
 
 class BeamEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
-    explicit BeamEffect(QObject *parent = nullptr);
+    explicit BeamEffect();
 
     void render(QPainter &p, const QRectF &rect,
                 const QVector<double> &spectrum,

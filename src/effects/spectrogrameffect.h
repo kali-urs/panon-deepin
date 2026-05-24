@@ -8,7 +8,6 @@
 
 class SpectrogramEffect : public VisualEffect
 {
-    Q_OBJECT
 public:
     explicit SpectrogramEffect(QObject *parent = nullptr);
 

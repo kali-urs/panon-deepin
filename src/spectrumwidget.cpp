@@ -24,19 +24,17 @@ SpectrumWidget::~SpectrumWidget()
 
 void SpectrumWidget::initEffects()
 {
-    m_effects.append(new BarEffect(this));
-    m_effects.append(new WaveEffect(this));
-    m_effects.append(new SolidEffect(this));
-    m_effects.append(new BeamEffect(this));
-    m_effects.append(new HillEffect(this));
-    m_effects.append(new SpectrogramEffect(this));
+    m_effects.append(new BarEffect());
+    m_effects.append(new WaveEffect());
+    m_effects.append(new SolidEffect());
+    m_effects.append(new BeamEffect());
+    m_effects.append(new HillEffect());
+    m_effects.append(new SpectrogramEffect());
 }
 
 void SpectrumWidget::deleteEffects()
 {
-    for (auto *e : m_effects) {
-        e->deleteLater();
-    }
+    qDeleteAll(m_effects);
     m_effects.clear();
 }
 

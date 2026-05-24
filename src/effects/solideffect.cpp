@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-SolidEffect::SolidEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+SolidEffect::SolidEffect() = default;
 
 void SolidEffect::render(QPainter &p, const QRectF &rect,
                           const QVector<double> &spectrum,

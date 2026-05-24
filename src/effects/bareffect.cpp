@@ -3,10 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-BarEffect::BarEffect(QObject *parent)
-    : VisualEffect(parent)
-{
-}
+BarEffect::BarEffect() = default;
 
 void BarEffect::render(QPainter &p, const QRectF &rect,
                         const QVector<double> &spectrum,
