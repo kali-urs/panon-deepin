@@ -45,9 +45,10 @@ if(NOT DTK_FOUND)
 endif()
 
 # Method 3: Direct header search (last resort)
+# DTK5 uses .h extension; DTK6 uses no extension like Qt6
 if(NOT DTK_FOUND OR NOT DTK_INCLUDE_DIRS)
     find_path(DTK_HEADER_DIR
-        NAMES ${NEEDED_HEADER}
+        NAMES ${NEEDED_HEADER} ${NEEDED_HEADER}.h
         PATHS
             /usr/include
             /usr/include/libdtk-6.0.0
@@ -56,7 +57,7 @@ if(NOT DTK_FOUND OR NOT DTK_INCLUDE_DIRS)
             /usr/include/Dtk6Gui
             /usr/include/dtk6
             /usr/include/Deepin
-            /usr/lib/x86_64-linux-gnu/cmake/DtkGui
+            /usr/lib/x86_64-linux-gnu
     )
     if(DTK_HEADER_DIR)
         set(DTK_INCLUDE_DIRS ${DTK_HEADER_DIR})
