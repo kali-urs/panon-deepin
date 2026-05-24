@@ -16,29 +16,29 @@ AudioSource::~AudioSource()
 QString AudioSource::findMonitorSourceName()
 {
     QProcess proc;
-    proc.start("pactl", {"info"});
+    proc.start("pactl", {"list", "sources", "short"});
     proc.waitForFinished(3000);
     QString info = proc.readAllStandardOutput();
 
-    QString defaultSource;
-    QString defaultSink;
+    QString runningMonitor;
+    QString anyMonitor;
 
     for (const QString &line : info.split('\n')) {
-        if (line.startsWith("Default Source:")) {
-            defaultSource = line.section(':', 1).trimmed();
-        }
-        if (line.startsWith("Default Sink:")) {
-            defaultSink = line.section(':', 1).trimmed();
+        QStringList cols = line.split('\t');
+        if (cols.size() < 5) continue;
+        QString name = cols[1].trimmed();
+        QString state = cols[4].trimmed();
+        if (!name.endsWith(".monitor")) continue;
+        anyMonitor = name;
+        if (state == "RUNNING") {
+            runningMonitor = name;
         }
     }
 
-    if (defaultSource.endsWith(".monitor")) {
-        return defaultSource;
-    }
-
-    if (!defaultSink.isEmpty()) {
-        return defaultSink + ".monitor";
-    }
+    if (!runningMonitor.isEmpty())
+        return runningMonitor;
+    if (!anyMonitor.isEmpty())
+        return anyMonitor;
 
     return "auto_null.monitor";
 }
