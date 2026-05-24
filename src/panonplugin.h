@@ -1,0 +1,55 @@
+#ifndef PANONPLUGIN_H
+#define PANONPLUGIN_H
+
+#include <QObject>
+#include <QtPlugin>
+#include <QIcon>
+#include <DGuiApplicationHelper>
+#include <pluginsiteminterface.h>
+
+class SpectrumWidget;
+class AudioSource;
+class FFTProcessor;
+
+class PanonPlugin : public QObject, PluginsItemInterface
+{
+    Q_OBJECT
+    Q_INTERFACES(PluginsItemInterface)
+    Q_PLUGIN_METADATA(IID "com.deepin.dock.PluginsItemInterface_2_0_0" FILE "panon.json")
+
+public:
+    explicit PanonPlugin(QObject *parent = nullptr);
+    ~PanonPlugin() override;
+
+    const QString pluginName() const override;
+    const QString pluginDisplayName() const override;
+    void init(PluginProxyInterface *proxyInter) override;
+    QWidget *itemWidget(const QString &itemKey) override;
+    QWidget *itemTipsWidget(const QString &itemKey) override;
+    QWidget *itemPopupApplet(const QString &itemKey) override;
+    const QString itemContextMenu(const QString &itemKey) override;
+    void invokedMenuItem(const QString &itemKey, const QString &menuId, const bool checked) override;
+    PluginFlags flags() const override;
+    void positionChanged(const Dock::Position position) override;
+
+    PluginType type() override { return Normal; }
+    PluginSizePolicy pluginSizePolicy() const override { return System; }
+    PluginMode status() const override { return PluginMode::Active; }
+    QString description() const override { return "Audio spectrum visualizer for the dock"; }
+    QIcon icon(const DockPart &part, DGuiApplicationHelper::ColorType themeType) override;
+    bool eventHandler(QEvent *event) override;
+
+private:
+    void onSamplesReady(const QVector<double> &samples);
+    void onWaveformReady(const QVector<double> &waveform);
+    void updateOrientation();
+
+    SpectrumWidget *m_widget = nullptr;
+    AudioSource *m_audioSource = nullptr;
+    FFTProcessor *m_fft = nullptr;
+    PluginProxyInterface *m_proxyInter = nullptr;
+    QVector<double> m_lastMagnitudes;
+    bool m_paused = false;
+};
+
+#endif

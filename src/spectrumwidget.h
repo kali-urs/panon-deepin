@@ -1,0 +1,52 @@
+#ifndef SPECTRUMWIDGET_H
+#define SPECTRUMWIDGET_H
+
+#include <QWidget>
+#include <QVector>
+#include <QColor>
+#include <QMutex>
+#include <QVector>
+#include <QString>
+
+class VisualEffect;
+
+class SpectrumWidget : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit SpectrumWidget(QWidget *parent = nullptr);
+    ~SpectrumWidget() override;
+
+    void updateSpectrum(const QVector<double> &magnitudes);
+    void updateWaveform(const QVector<double> &waveform);
+    void setBarCount(int count);
+    void setColors(const QColor &from, const QColor &to);
+    void setOrientation(bool vertical);
+
+    void setEffect(int index);
+    int effectIndex() const { return m_effectIndex; }
+    int effectCount() const;
+    QString effectName(int index) const;
+
+protected:
+    void paintEvent(QPaintEvent *event) override;
+    QSize sizeHint() const override { return m_vertical ? QSize(36, 200) : QSize(200, 36); }
+    QSize minimumSizeHint() const override { return m_vertical ? QSize(20, 20) : QSize(20, 20); }
+
+private:
+    void initEffects();
+    void deleteEffects();
+
+    QVector<double> m_spectrum;
+    QVector<double> m_waveform;
+    QMutex m_mutex;
+    int m_barCount = 32;
+    bool m_vertical = false;
+    QColor m_colorFrom{0, 180, 255};
+    QColor m_colorTo{255, 0, 128};
+
+    QVector<VisualEffect *> m_effects;
+    int m_effectIndex = 0;
+};
+
+#endif
