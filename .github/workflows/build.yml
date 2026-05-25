@@ -27,6 +27,7 @@ jobs:
             cmake \
             pkg-config \
             qt6-base-dev \
+            libpulse-dev \
             dde-dock-dev \
             build-essential \
             fakeroot \
@@ -73,6 +74,7 @@ jobs:
             cmake \
             pkg-config \
             qt6-base-dev \
+            libpulse-dev \
             dde-dock-dev \
             build-essential \
             fakeroot \

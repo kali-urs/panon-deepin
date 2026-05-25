@@ -1,8 +1,6 @@
 #include "audiosource.h"
 #include <QDebug>
 #include <QProcess>
-#include <QFileInfo>
-#include <QFile>
 #include <cmath>
 
 AudioSource::AudioSource(QObject *parent)
@@ -52,6 +50,23 @@ QStringList AudioSource::listMonitorSourcesWithState()
     return result;
 }
 
+void AudioSource::printAudioDiagnostics()
+{
+    QProcess proc;
+
+    proc.start("pactl", {"info"});
+    proc.waitForFinished(3000);
+    qDebug() << "=== pactl info ===" << proc.readAllStandardOutput().trimmed();
+
+    proc.start("pactl", {"list", "sources"});
+    proc.waitForFinished(3000);
+    qDebug() << "=== pactl list sources ===" << proc.readAllStandardOutput().trimmed();
+
+    proc.start("pactl", {"list", "sinks"});
+    proc.waitForFinished(3000);
+    qDebug() << "=== pactl list sinks ===" << proc.readAllStandardOutput().trimmed();
+}
+
 QString AudioSource::findMonitorSourceName()
 {
     QProcess proc;
@@ -59,7 +74,7 @@ QString AudioSource::findMonitorSourceName()
     proc.waitForFinished(3000);
     QString info = proc.readAllStandardOutput();
 
-    qDebug() << "AudioSource: all sources output:" << info.trimmed();
+    qDebug() << "=== pactl list sources short ===" << info.trimmed();
 
     QString runningMonitor;
     QString anyMonitor;
@@ -85,20 +100,16 @@ QString AudioSource::findMonitorSourceName()
         return anyMonitor;
     }
 
-    qWarning() << "AudioSource: no .monitor source found, trying default-sink monitor";
-
-    QProcess proc2;
-    proc2.start("pactl", {"info"});
-    proc2.waitForFinished(3000);
-    QString info2 = proc2.readAllStandardOutput();
-    qDebug() << "AudioSource: pactl info output:" << info2.trimmed();
-    for (const QString &line : info2.split('\n')) {
+    // Fallback: construct from default sink
+    proc.start("pactl", {"info"});
+    proc.waitForFinished(3000);
+    for (const QString &line : proc.readAllStandardOutput().split('\n')) {
         if (line.startsWith("Default Sink:")) {
-            QString defaultSink = line.mid(QString("Default Sink:").length()).trimmed();
-            if (!defaultSink.isEmpty()) {
-                QString monitorName = defaultSink + ".monitor";
-                qDebug() << "AudioSource: trying default sink monitor:" << monitorName;
-                return monitorName;
+            QString sink = line.mid(13).trimmed();
+            if (!sink.isEmpty()) {
+                QString monitor = sink + ".monitor";
+                qDebug() << "AudioSource: constructed from default sink:" << monitor;
+                return monitor;
             }
         }
     }
@@ -107,36 +118,37 @@ QString AudioSource::findMonitorSourceName()
     return "auto_null.monitor";
 }
 
-static bool canExec(const QString &name)
-{
-    return QFileInfo::exists("/usr/bin/" + name)
-        || QFileInfo::exists("/bin/" + name);
-}
-
-static QByteArray readAll(QProcess *p, int bytes)
-{
-    while (p->bytesAvailable() < bytes) {
-        if (p->state() != QProcess::Running)
-            return {};
-        if (!p->waitForReadyRead(100))
-            return {};
-    }
-    return p->read(bytes);
-}
-
-static QString sinkNameFromMonitor(const QString &monitorName)
-{
-    if (monitorName.endsWith(".monitor"))
-        return monitorName.left(monitorName.size() - 8);
-    return monitorName;
-}
-
 bool AudioSource::startCapture()
 {
     if (m_running) return true;
 
+    printAudioDiagnostics();
+
     m_sourceName = findMonitorSourceName();
-    qDebug() << "AudioSource: using source:" << m_sourceName;
+    qDebug() << "AudioSource: using monitor source:" << m_sourceName;
+
+    pa_sample_spec ss;
+    ss.format = PA_SAMPLE_S16LE;
+    ss.rate = m_sampleRate;
+    ss.channels = m_channels;
+
+    int error;
+    m_paSimple = pa_simple_new(
+        nullptr,
+        "Panon",
+        PA_STREAM_RECORD,
+        m_sourceName.toUtf8().constData(),
+        "audio capture",
+        &ss,
+        nullptr,
+        nullptr,
+        &error
+    );
+
+    if (!m_paSimple) {
+        qWarning() << "AudioSource: pa_simple_new failed:" << pa_strerror(error);
+        return false;
+    }
 
     m_stopFlag.storeRelaxed(0);
     m_running = true;
@@ -147,19 +159,16 @@ bool AudioSource::startCapture()
 void AudioSource::stopCapture()
 {
     m_stopFlag.storeRelaxed(1);
-
-    if (m_process) {
-        m_process->kill();
-        m_process->waitForFinished(2000);
-        delete m_process;
-        m_process = nullptr;
-    }
-
     m_running = false;
 
     if (isRunning()) {
         quit();
         wait(2000);
+    }
+
+    if (m_paSimple) {
+        pa_simple_free(m_paSimple);
+        m_paSimple = nullptr;
     }
 }
 
@@ -172,59 +181,23 @@ bool AudioSource::switchSource(const QString &name)
 
 void AudioSource::run()
 {
-    const int frameBytes = m_bufferSize * m_channels * m_sampleSize;
-
-    // Use pw-record (native PipeWire) — avoids PulseAudio compat layer which breaks audio
-    if (!canExec("pw-record")) {
-        qWarning() << "AudioSource: pw-record not found, install pipewire-bin";
-        m_running = false;
-        return;
-    }
-
-    QString target = sinkNameFromMonitor(m_sourceName);
-    QStringList args = {"--format=s16", "--rate=44100", "--channels=2",
-                        "--latency=20msec", "--target=" + target, "/dev/stdout"};
-
-    qDebug() << "AudioSource: starting pw-record with args:" << args;
-
-    m_process = new QProcess;
-    m_process->start("pw-record", args);
-    if (!m_process->waitForStarted(5000)) {
-        qWarning() << "AudioSource: pw-record failed to start, trying without --target";
-        // Retry without target (use default source)
-        args.removeAt(3);
-        m_process->start("pw-record", args);
-        if (!m_process->waitForStarted(5000)) {
-            qWarning() << "AudioSource: pw-record failed:" << m_process->errorString();
-            m_running = false;
-            return;
-        }
-    }
-
-    // pw-record writes a 44-byte WAV header; skip it
-    QByteArray header = readAll(m_process, 44);
-    if (header.size() < 44)
-        qWarning() << "AudioSource: short WAV header:" << header.size();
-
+    int16_t rawBuf[m_bufferSize * m_channels];
     QVector<double> samples(m_bufferSize);
 
+    qDebug() << "AudioSource: capture thread started, buffer:" << m_bufferSize
+             << "rate:" << m_sampleRate << "channels:" << m_channels;
+
     while (!m_stopFlag.loadRelaxed()) {
-        if (m_process->state() != QProcess::Running) {
-            qWarning() << "AudioSource: pw-record exited";
+        int error;
+        if (pa_simple_read(m_paSimple, rawBuf, sizeof(rawBuf), &error) < 0) {
+            qWarning() << "AudioSource: read error:" << pa_strerror(error);
             break;
         }
 
-        QByteArray data = readAll(m_process, frameBytes);
-        if (data.size() < frameBytes) {
-            if (data.isEmpty()) continue;
-            data.resize(frameBytes);
-        }
-
-        const int16_t *buf = reinterpret_cast<const int16_t *>(data.constData());
         for (int i = 0; i < m_bufferSize; ++i) {
             int sum = 0;
             for (int ch = 0; ch < m_channels; ++ch) {
-                sum += buf[i * m_channels + ch];
+                sum += rawBuf[i * m_channels + ch];
             }
             samples[i] = sum / (double)(m_channels * 32768);
         }
@@ -233,9 +206,6 @@ void AudioSource::run()
         emit waveformReady(samples);
     }
 
-    m_process->kill();
-    m_process->waitForFinished(1000);
-
-    qDebug() << "AudioSource: capture stopped";
+    qDebug() << "AudioSource: capture thread stopped";
     m_running = false;
 }
