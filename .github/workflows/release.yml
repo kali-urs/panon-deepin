@@ -29,19 +29,10 @@ jobs:
             build-essential fakeroot debhelper-compat
           rm -rf /var/lib/apt/lists/*
 
-      - name: Build .so
-        run: |
-          mkdir -p build
-          cd build
-          cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
-          strip libpanon.so
-
       - name: Build .deb
         run: |
           dpkg-buildpackage -b -us -uc --no-sign
           mkdir -p release-artifacts
-          cp build/libpanon.so release-artifacts/
           mv ../*.deb release-artifacts/ 2>/dev/null || true
 
       - name: Create checksums
@@ -58,19 +49,9 @@ jobs:
 
             Audio spectrum visualizer dock plugin for Deepin 25.
 
-            ### Downloads
-            - `libpanon.so` — raw plugin shared library, copy to `/usr/lib/dde-dock/plugins/`
-            - `*.deb` — Debian package for easy installation
-
-            ### Install from .deb
+            ### Install
             ```bash
             sudo apt install ./dde-dock-panon_*.deb
-            pkill dde-dock
-            ```
-
-            ### Install from .so
-            ```bash
-            sudo cp libpanon.so /usr/lib/dde-dock/plugins/
             pkill dde-dock
             ```
           files: release-artifacts/*
