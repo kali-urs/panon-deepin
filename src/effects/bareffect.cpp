@@ -11,7 +11,7 @@ void BarEffect::render(QPainter &p, const QRectF &rect,
                         const QVector<double> &,
                         bool vertical)
 {
-    int n = std::min(m_barCount, std::min(left.size(), right.size()));
+    int n = std::min<int>(m_barCount, std::min<int>(left.size(), right.size()));
     if (m_peakHold.size() != n * 2) {
         m_peakHold = QVector<double>(n * 2, 0.0);
     }

@@ -35,9 +35,10 @@ jobs:
           rm -rf /var/lib/apt/lists/*
 
       - name: Build .deb package with verbose logging
+        shell: bash
         run: |
+          set -o pipefail
           dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
-          exit ${PIPESTATUS[0]}
 
       - name: Upload build logs (even on failure)
         if: failure()
