@@ -5,6 +5,7 @@
 #include <QColor>
 #include <QPainter>
 #include <QString>
+#include <algorithm>
 #include <cmath>
 
 class VisualEffect

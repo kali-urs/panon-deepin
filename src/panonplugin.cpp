@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QTimer>
+#include <algorithm>
 #include <QLabel>
 #include <QApplication>
 #include <QPainter>
