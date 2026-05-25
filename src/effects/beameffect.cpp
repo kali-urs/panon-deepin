@@ -7,76 +7,62 @@ BeamEffect::BeamEffect() = default;
 
 void BeamEffect::render(QPainter &p, const QRectF &rect,
                           const QVector<double> &left,
-                          const QVector<double> &,
+                          const QVector<double> &right,
                           const QVector<double> &,
                           bool vertical)
 {
-    if (left.isEmpty()) return;
+    if (left.isEmpty() || right.isEmpty()) return;
 
     double w = rect.width();
     double h = rect.height();
-    int n = std::min(128, static_cast<int>(left.size()));
+    double half = vertical ? w * 0.5 : h * 0.5;
+    int n = std::min(32, static_cast<int>(left.size()));
 
-    QPainterPath fillPath;
-    QPainterPath linePath;
+    auto drawBeams = [&](const QVector<double> &data, bool isLeft) {
+        double step = vertical ? h / n : w / n;
+        double gap = step * 0.2;
 
-    if (vertical) {
-        double step = h / n;
-        fillPath.moveTo(w, 0);
         for (int i = 0; i < n; ++i) {
-            int idx = (i * left.size()) / n;
-            double val = std::clamp(left[idx], 0.0, 1.0);
-            double x = w - val * val * w * 0.95;
-            double y = i * step;
-            if (i == 0) {
-                fillPath.lineTo(x, y);
-                linePath.moveTo(x, y);
+            int idx = (i * data.size()) / n;
+            double val = std::clamp(data[idx], 0.0, 1.0);
+            if (val < 0.01) continue;
+
+            double t = (double)i / std::max(1, n - 1);
+            QColor color = lerpColor(t);
+            color.setAlpha(200);
+
+            QPainterPath beam;
+            if (vertical) {
+                double barX, barY = i * step + gap / 2;
+                double barH = step - gap;
+                if (isLeft) {
+                    barX = w - val * half * 0.9;
+                    beam.addRoundedRect(QRectF(barX, barY, w - barX, barH), 0, 2);
+                } else {
+                    barX = 0;
+                    beam.addRoundedRect(QRectF(0, barY, val * half * 0.9, barH), 0, 2);
+                }
             } else {
-                fillPath.lineTo(x, y);
-                linePath.lineTo(x, y);
+                double barX = i * step + gap / 2;
+                double barW = std::max(1.0, step - gap);
+                if (isLeft) {
+                    double barH = val * half * 0.9;
+                    beam.addRoundedRect(QRectF(barX, h - barH, barW, barH), 2, 0);
+                } else {
+                    double barH = val * half * 0.9;
+                    beam.addRoundedRect(QRectF(barX, 0, barW, barH), 2, 0);
+                }
             }
+
+            QColor glow = color;
+            glow.setAlpha(40);
+            p.setPen(QPen(glow, 6));
+            p.setBrush(Qt::NoBrush);
+            p.drawPath(beam);
+            p.fillPath(beam, color);
         }
-        fillPath.lineTo(w, h);
-        fillPath.closeSubpath();
-    } else {
-        double step = w / n;
-        fillPath.moveTo(0, h);
-        for (int i = 0; i < n; ++i) {
-            int idx = (i * left.size()) / n;
-            double val = std::clamp(left[idx], 0.0, 1.0);
-            double x = i * step;
-            double y = h - val * val * h * 0.95;
-            if (i == 0) {
-                fillPath.lineTo(x, y);
-                linePath.moveTo(x, y);
-            } else {
-                fillPath.lineTo(x, y);
-                linePath.lineTo(x, y);
-            }
-        }
-        fillPath.lineTo(w, h);
-        fillPath.closeSubpath();
-    }
+    };
 
-    QColor fillColor = lerpColor(0.4);
-    fillColor.setAlpha(40);
-    p.setBrush(fillColor);
-    p.setPen(Qt::NoPen);
-    p.drawPath(fillPath);
-
-    QColor glowColor = lerpColor(0.6);
-    glowColor.setAlpha(25);
-    p.setPen(QPen(glowColor, 10));
-    p.setBrush(Qt::NoBrush);
-    p.drawPath(linePath);
-
-    QColor lineColor = lerpColor(0.7);
-    lineColor.setAlpha(180);
-    p.setPen(QPen(lineColor, 2));
-    p.drawPath(linePath);
-
-    QColor brightLine = lerpColor(0.9);
-    brightLine.setAlpha(100);
-    p.setPen(QPen(brightLine, 1));
-    p.drawPath(linePath);
+    drawBeams(left, true);
+    drawBeams(right, false);
 }

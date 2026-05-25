@@ -38,6 +38,7 @@ private:
     void onWaveformReady(const QVector<double> &waveform);
     void updateOrientation();
     void setWidth(int w);
+    void reapplyWidth();
 
     SpectrumWidget *m_widget = nullptr;
     AudioSource *m_audioSource = nullptr;

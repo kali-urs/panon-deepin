@@ -11,6 +11,7 @@
 #include <QApplication>
 #include <QPainter>
 #include <QPixmap>
+#include <QTimer>
 
 
 PanonPlugin::PanonPlugin(QObject *parent)
@@ -33,12 +34,19 @@ const QString PanonPlugin::pluginName() const
 
 const QString PanonPlugin::pluginDisplayName() const
 {
-    return "Panon Audio Visualizer";
+    return "Panon 音频可视化";
 }
 
 void PanonPlugin::setWidth(int w)
 {
     m_width = std::clamp(w, 50, 600);
+    m_widget->setFixedWidth(m_width);
+    if (m_proxyInter)
+        m_proxyInter->itemUpdate(this, pluginName());
+}
+
+void PanonPlugin::reapplyWidth()
+{
     m_widget->setFixedWidth(m_width);
     if (m_proxyInter)
         m_proxyInter->itemUpdate(this, pluginName());
@@ -73,6 +81,8 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
     qDebug() << "Panon: available monitor sources:" << AudioSource::listMonitorSources();
 
     m_proxyInter->itemAdded(this, pluginName());
+
+    QTimer::singleShot(200, this, &PanonPlugin::reapplyWidth);
 }
 
 QWidget *PanonPlugin::itemWidget(const QString &itemKey)
@@ -84,7 +94,7 @@ QWidget *PanonPlugin::itemWidget(const QString &itemKey)
 QWidget *PanonPlugin::itemTipsWidget(const QString &itemKey)
 {
     Q_UNUSED(itemKey);
-    auto *label = new QLabel("Panon Audio Visualizer");
+    auto *label = new QLabel("Panon 音频可视化");
     label->setStyleSheet("padding: 8px;");
     return label;
 }
@@ -103,13 +113,13 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
 
     QJsonObject pauseItem;
     pauseItem["itemId"] = "pause";
-    pauseItem["itemText"] = m_paused ? "Resume" : "Pause";
+    pauseItem["itemText"] = m_paused ? "继续" : "暂停";
     pauseItem["isActive"] = true;
     items.append(pauseItem);
 
     QJsonObject effectHeader;
     effectHeader["itemId"] = "effect_header";
-    effectHeader["itemText"] = "[Effects]";
+    effectHeader["itemText"] = "[效果]";
     effectHeader["isActive"] = false;
     items.append(effectHeader);
 
@@ -121,9 +131,30 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
         items.append(sub);
     }
 
+    QJsonObject colorHeader;
+    colorHeader["itemId"] = "color_header";
+    colorHeader["itemText"] = "[颜色]";
+    colorHeader["isActive"] = false;
+    items.append(colorHeader);
+
+    {
+        QJsonObject sub;
+        sub["itemId"] = "color_static";
+        sub["itemText"] = QString(m_widget->colorMode() == SpectrumWidget::Static ? "✓ " : "") + "静态";
+        sub["isActive"] = true;
+        items.append(sub);
+    }
+    {
+        QJsonObject sub;
+        sub["itemId"] = "color_shift";
+        sub["itemText"] = QString(m_widget->colorMode() == SpectrumWidget::Shift ? "✓ " : "") + "幻彩";
+        sub["isActive"] = true;
+        items.append(sub);
+    }
+
     QJsonObject widthHeader;
     widthHeader["itemId"] = "width_header";
-    widthHeader["itemText"] = "[Width]";
+    widthHeader["itemText"] = "[宽度]";
     widthHeader["isActive"] = false;
     items.append(widthHeader);
 
@@ -138,7 +169,7 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
 
     QJsonObject srcHeader;
     srcHeader["itemId"] = "src_header";
-    srcHeader["itemText"] = "[Audio Source]";
+    srcHeader["itemText"] = "[音频源]";
     srcHeader["isActive"] = false;
     items.append(srcHeader);
 
@@ -147,7 +178,7 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
     if (srcWithState.isEmpty()) {
         QJsonObject sub;
         sub["itemId"] = "no_sources";
-        sub["itemText"] = "(no monitor sources)";
+        sub["itemText"] = "(无监控源)";
         sub["isActive"] = false;
         items.append(sub);
     } else {
@@ -167,7 +198,7 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
 
     QJsonObject quitItem;
     quitItem["itemId"] = "quit";
-    quitItem["itemText"] = "Quit";
+    quitItem["itemText"] = "退出";
     quitItem["isActive"] = true;
     items.append(quitItem);
 
@@ -191,6 +222,10 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         bool ok = false;
         int idx = QStringView(menuId).sliced(7).toInt(&ok);
         if (ok) m_widget->setEffect(idx);
+    } else if (menuId == "color_static") {
+        m_widget->setColorMode(SpectrumWidget::Static);
+    } else if (menuId == "color_shift") {
+        m_widget->setColorMode(SpectrumWidget::Shift);
     } else if (menuId.startsWith("width_")) {
         bool ok = false;
         int w = QStringView(menuId).sliced(6).toInt(&ok);

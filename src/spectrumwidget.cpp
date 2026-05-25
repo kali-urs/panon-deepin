@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <algorithm>
 #include <cmath>
+#include <QRandomGenerator>
 
 SpectrumWidget::SpectrumWidget(QWidget *parent)
     : QWidget(parent)
@@ -17,6 +18,10 @@ SpectrumWidget::SpectrumWidget(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setAutoFillBackground(false);
     initEffects();
+
+    m_colorTimer = new QTimer(this);
+    connect(m_colorTimer, &QTimer::timeout, this, &SpectrumWidget::advanceColorShift);
+    m_colorTimer->start(80);
 }
 
 SpectrumWidget::~SpectrumWidget()
@@ -96,6 +101,13 @@ QString SpectrumWidget::effectName(int index) const
     return {};
 }
 
+void SpectrumWidget::advanceColorShift()
+{
+    if (m_colorMode != Shift) return;
+    m_hueShift = std::fmod(m_hueShift + QRandomGenerator::global()->bounded(12) - 6, 360.0);
+    update();
+}
+
 void SpectrumWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
@@ -108,6 +120,7 @@ void SpectrumWidget::paintEvent(QPaintEvent *)
     VisualEffect *effect = m_effects[m_effectIndex];
     effect->setColorFrom(m_colorFrom);
     effect->setColorTo(m_colorTo);
+    effect->setHueShift(m_hueShift);
 
     effect->render(p, rect(), m_spectrumLeft, m_spectrumRight, m_waveform, m_vertical);
 }

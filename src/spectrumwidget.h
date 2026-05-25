@@ -5,8 +5,8 @@
 #include <QVector>
 #include <QColor>
 #include <QMutex>
-#include <QVector>
 #include <QString>
+#include <QTimer>
 
 class VisualEffect;
 
@@ -14,6 +14,8 @@ class SpectrumWidget : public QWidget
 {
     Q_OBJECT
 public:
+    enum ColorMode { Static, Shift };
+
     explicit SpectrumWidget(QWidget *parent = nullptr);
     ~SpectrumWidget() override;
 
@@ -28,6 +30,9 @@ public:
     int effectCount() const;
     QString effectName(int index) const;
 
+    void setColorMode(ColorMode mode) { m_colorMode = mode; }
+    ColorMode colorMode() const { return m_colorMode; }
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     QSize sizeHint() const override { return m_vertical ? QSize(36, 200) : QSize(200, 36); }
@@ -36,6 +41,7 @@ protected:
 private:
     void initEffects();
     void deleteEffects();
+    void advanceColorShift();
 
     QVector<double> m_spectrumLeft;
     QVector<double> m_spectrumRight;
@@ -48,6 +54,9 @@ private:
 
     QVector<VisualEffect *> m_effects;
     int m_effectIndex = 0;
+    ColorMode m_colorMode = Static;
+    double m_hueShift = 0.0;
+    QTimer *m_colorTimer = nullptr;
 };
 
 #endif

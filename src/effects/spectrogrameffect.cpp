@@ -39,35 +39,34 @@ void SpectrogramEffect::scrollImage()
     int w = m_image.width();
     int h = m_image.height();
     int bpl = m_image.bytesPerLine();
-
-    for (int y = 0; y < h; ++y) {
-        uchar *line = m_image.scanLine(y);
-        memmove(line + 4, line, (w - 1) * 4);
-        memset(line, 0, 4);
-    }
+    memmove(m_image.scanLine(0), m_image.scanLine(0) + 4, (w - 1) * 4 * h);
+    for (int y = 0; y < h; ++y)
+        reinterpret_cast<uint32_t *>(m_image.scanLine(y))[w - 1] = 0;
 }
 
-void SpectrogramEffect::addColumn(const QVector<double> &spectrum)
+void SpectrogramEffect::addColumn(const QVector<double> &data, int xOffset)
 {
     if (m_image.isNull()) return;
     int h = m_image.height();
-
+    int w = m_image.width();
+    int halfW = w / 2;
     for (int y = 0; y < h; ++y) {
-        int specIdx = (y * spectrum.size()) / h;
-        double val = std::clamp(spectrum[specIdx], 0.0, 1.0);
+        int specIdx = (y * data.size()) / h;
+        double val = std::clamp(data[specIdx], 0.0, 1.0);
         double dbVal = std::log10(1.0 + val * 100.0) / 2.0;
         QColor color = specColor(dbVal);
-        m_image.setPixelColor(0, h - 1 - y, color);
+        int px = xOffset;
+        m_image.setPixelColor(px, h - 1 - y, color);
     }
 }
 
 void SpectrogramEffect::render(QPainter &p, const QRectF &rect,
                                 const QVector<double> &left,
-                                const QVector<double> &,
+                                const QVector<double> &right,
                                 const QVector<double> &,
                                 bool vertical)
 {
-    if (left.isEmpty()) return;
+    if (left.isEmpty() || right.isEmpty()) return;
 
     QMutexLocker lock(&m_mutex);
 
@@ -80,14 +79,17 @@ void SpectrogramEffect::render(QPainter &p, const QRectF &rect,
         ih = static_cast<int>(rect.height());
     }
 
-    if (m_image.isNull() || m_image.width() != iw || m_image.height() != ih) {
-        m_image = QImage(iw, ih, QImage::Format_ARGB32);
+    int imgW = iw * 2;
+
+    if (m_image.isNull() || m_image.width() != imgW || m_image.height() != ih) {
+        m_image = QImage(imgW, ih, QImage::Format_ARGB32);
         m_image.fill(Qt::transparent);
         m_colCount = 0;
     }
 
     scrollImage();
-    addColumn(left);
+    addColumn(left, 0);
+    addColumn(right, iw);
     m_colCount++;
 
     if (vertical) {

@@ -13,7 +13,7 @@ public:
                 const QVector<double> &right,
                 const QVector<double> &waveform,
                 bool vertical) override;
-    QString name() const override { return "Wave"; }
+    QString name() const override { return "波形"; }
 };
 
 #endif

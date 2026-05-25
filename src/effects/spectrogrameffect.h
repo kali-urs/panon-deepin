@@ -16,12 +16,12 @@ public:
                 const QVector<double> &right,
                 const QVector<double> &waveform,
                 bool vertical) override;
-    QString name() const override { return "Spectrogram"; }
+    QString name() const override { return "频谱图"; }
     void reset() override;
 
 private:
     void scrollImage();
-    void addColumn(const QVector<double> &spectrum);
+    void addColumn(const QVector<double> &data, int xOffset);
 
     QImage m_image;
     QMutex m_mutex;

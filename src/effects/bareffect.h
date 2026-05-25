@@ -13,7 +13,7 @@ public:
                 const QVector<double> &right,
                 const QVector<double> &waveform,
                 bool vertical) override;
-    QString name() const override { return "Bars"; }
+    QString name() const override { return "柱状"; }
     void reset() override { m_peakHold.fill(0); }
 
     void setBarCount(int n) { m_barCount = std::clamp(n, 4, 128); }
