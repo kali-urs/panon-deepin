@@ -35,7 +35,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
-    QSize sizeHint() const override { return m_vertical ? QSize(36, 200) : QSize(200, 36); }
+    QSize sizeHint() const override { return m_vertical ? QSize(36, 150) : QSize(150, 36); }
     QSize minimumSizeHint() const override { return m_vertical ? QSize(20, 20) : QSize(20, 20); }
 
 private:

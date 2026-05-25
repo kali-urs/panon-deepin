@@ -15,36 +15,37 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
 
     double w = rect.width();
     double h = rect.height();
-    double half = vertical ? w * 0.5 : h * 0.5;
     int n = std::min(64, static_cast<int>(left.size()));
 
-    auto drawHill = [&](const QVector<double> &data, bool isLeft) {
+    auto drawHill = [&](const QVector<double> &data, bool isLeft, bool vertical) {
         QPainterPath path;
-        double step = vertical ? h / n : w / n;
+        double half = vertical ? h * 0.5 : w * 0.5;
 
         if (vertical) {
-            double startX = isLeft ? w : 0;
-            path.moveTo(startX, 0);
-            for (int i = 0; i < n; ++i) {
-                int idx = (i * data.size()) / n;
-                double val = std::clamp(data[idx], 0.0, 1.0);
-                double x = isLeft ? w - val * half * 0.9 : val * half * 0.9;
-                double y = i * step + step / 2;
-                path.lineTo(x, y);
-            }
-            path.lineTo(startX, h);
-            path.closeSubpath();
-        } else {
-            double startY = isLeft ? h : 0;
+            double step = half / n;
+            double startY = isLeft ? 0 : h;
             path.moveTo(0, startY);
             for (int i = 0; i < n; ++i) {
                 int idx = (i * data.size()) / n;
                 double val = std::clamp(data[idx], 0.0, 1.0);
-                double x = i * step + step / 2;
-                double y = isLeft ? h - val * half * 0.9 : val * half * 0.9;
+                double x = val * w * 0.9;
+                double y = isLeft ? i * step + step / 2 : h - (i * step + step / 2);
                 path.lineTo(x, y);
             }
-            path.lineTo(w, startY);
+            path.lineTo(0, isLeft ? half : h - half);
+            path.closeSubpath();
+        } else {
+            double step = half / n;
+            double startX = isLeft ? 0 : w;
+            path.moveTo(startX, h);
+            for (int i = 0; i < n; ++i) {
+                int idx = (i * data.size()) / n;
+                double val = std::clamp(data[idx], 0.0, 1.0);
+                double x = isLeft ? i * step + step / 2 : w - (i * step + step / 2);
+                double y = h - val * h * 0.9;
+                path.lineTo(x, y);
+            }
+            path.lineTo(isLeft ? half : w - half, h);
             path.closeSubpath();
         }
 
@@ -54,9 +55,9 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
 
         QLinearGradient grad;
         if (vertical)
-            grad = QLinearGradient(isLeft ? w : 0, 0, isLeft ? w - half : half, 0);
+            grad = QLinearGradient(0, isLeft ? 0 : h, w * 0.3, isLeft ? half : h - half);
         else
-            grad = QLinearGradient(0, isLeft ? h : 0, 0, isLeft ? h - half : half);
+            grad = QLinearGradient(isLeft ? 0 : w, h, isLeft ? half : w - half, h * 0.7);
         grad.setColorAt(0.0, g0);
         grad.setColorAt(0.5, g1);
         grad.setColorAt(1.0, g2);
@@ -72,6 +73,21 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
         p.drawPath(path);
     };
 
-    drawHill(left, true);
-    drawHill(right, false);
+    if (vertical) {
+        drawHill(left, true, true);
+        drawHill(right, false, true);
+        double half = h * 0.5;
+        if (half > 2) {
+            p.setPen(QPen(QColor(255, 255, 255, 15), 1));
+            p.drawLine(QPointF(0, half), QPointF(w, half));
+        }
+    } else {
+        drawHill(left, true, false);
+        drawHill(right, false, false);
+        double half = w * 0.5;
+        if (half > 2) {
+            p.setPen(QPen(QColor(255, 255, 255, 15), 1));
+            p.drawLine(QPointF(half, 0), QPointF(half, h));
+        }
+    }
 }

@@ -45,7 +45,7 @@ private:
     FFTProcessor *m_fft = nullptr;
     PluginProxyInterface *m_proxyInter = nullptr;
     bool m_paused = false;
-    int m_width = 200;
+    int m_width = 150;
 };
 
 #endif

@@ -18,14 +18,14 @@ void WaveEffect::render(QPainter &p, const QRectF &rect,
     int n = waveform.size();
     int step = std::max(1, n / 256);
 
-    auto drawWave = [&](double sign, double yOff) {
+    auto drawWave = [&](double xOff, double yOff) {
         QPainterPath path;
         if (vertical) {
             double yStep = h / n;
             for (int i = 0; i < n; i += step) {
                 double val = std::clamp(waveform[i], -1.0, 1.0);
-                double x = w / 2 + val * w * 0.4 * sign;
-                double y = i * yStep;
+                double x = xOff + val * (w * 0.4);
+                double y = i * yStep + yOff;
                 if (i == 0) path.moveTo(x, y);
                 else path.lineTo(x, y);
             }
@@ -33,8 +33,8 @@ void WaveEffect::render(QPainter &p, const QRectF &rect,
             double xStep = w / n;
             for (int i = 0; i < n; i += step) {
                 double val = std::clamp(waveform[i], -1.0, 1.0);
-                double x = i * xStep;
-                double y = h / 2 + val * h * 0.4 * sign;
+                double x = i * xStep + xOff;
+                double y = yOff + val * (h * 0.4);
                 if (i == 0) path.moveTo(x, y);
                 else path.lineTo(x, y);
             }
@@ -52,6 +52,13 @@ void WaveEffect::render(QPainter &p, const QRectF &rect,
         p.drawPath(path);
     };
 
-    drawWave(-1.0, 0);  // L channel (bottom/left)
-    drawWave(1.0, 0);   // R channel (top/right)
+    if (vertical) {
+        double half = h * 0.5;
+        drawWave(w * 0.1, half * 0.5);   // L on top half
+        drawWave(w * 0.1, half + half * 0.5);  // R on bottom half
+    } else {
+        double half = w * 0.5;
+        drawWave(half * 0.5, h * 0.5);   // L on left half
+        drawWave(half + half * 0.5, h * 0.5);  // R on right half
+    }
 }

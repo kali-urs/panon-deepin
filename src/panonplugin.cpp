@@ -63,7 +63,6 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 
     m_widget = new SpectrumWidget;
     m_widget->setBarCount(32);
-    m_widget->setFixedWidth(m_width);
 
     m_audioSource = new AudioSource(this);
 

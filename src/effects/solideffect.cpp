@@ -15,36 +15,37 @@ void SolidEffect::render(QPainter &p, const QRectF &rect,
 
     double w = rect.width();
     double h = rect.height();
-    double half = vertical ? w * 0.5 : h * 0.5;
     int n = std::min(128, static_cast<int>(left.size()));
 
-    auto drawFill = [&](const QVector<double> &data, double sign, bool isLeft) {
+    auto drawFill = [&](const QVector<double> &data, bool isLeft, bool vertical) {
         QPainterPath path;
+        double half = vertical ? h * 0.5 : w * 0.5;
+
         if (vertical) {
             double step = h / n;
-            double startX = isLeft ? w : 0;
-            path.moveTo(startX, 0);
-            for (int i = 0; i < n; ++i) {
-                int idx = (i * data.size()) / n;
-                double val = std::clamp(data[idx], 0.0, 1.0);
-                double x = isLeft ? w - val * half * 0.92 : val * half * 0.92;
-                double y = i * step + step / 2;
-                path.lineTo(x, y);
-            }
-            path.lineTo(startX, h);
-            path.closeSubpath();
-        } else {
-            double step = w / n;
-            double startY = isLeft ? h : 0;
+            double startY = isLeft ? 0 : h;
             path.moveTo(0, startY);
             for (int i = 0; i < n; ++i) {
                 int idx = (i * data.size()) / n;
                 double val = std::clamp(data[idx], 0.0, 1.0);
-                double x = i * step + step / 2;
-                double y = isLeft ? h - val * half * 0.92 : val * half * 0.92;
+                double x = val * (w * 0.92);
+                double y = isLeft ? i * step + step / 2 : h - (i * step + step / 2);
                 path.lineTo(x, y);
             }
-            path.lineTo(w, startY);
+            path.lineTo(0, startY + (isLeft ? h * 0.5 : -h * 0.5));
+            path.closeSubpath();
+        } else {
+            double step = w / n;
+            double startX = isLeft ? 0 : w;
+            path.moveTo(startX, h);
+            for (int i = 0; i < n; ++i) {
+                int idx = (i * data.size()) / n;
+                double val = std::clamp(data[idx], 0.0, 1.0);
+                double x = isLeft ? i * step + step / 2 : w - (i * step + step / 2);
+                double y = h - val * (h * 0.92);
+                path.lineTo(x, y);
+            }
+            path.lineTo(startX + (isLeft ? w * 0.5 : -w * 0.5), h);
             path.closeSubpath();
         }
 
@@ -54,9 +55,9 @@ void SolidEffect::render(QPainter &p, const QRectF &rect,
 
         QLinearGradient grad;
         if (vertical)
-            grad = QLinearGradient(isLeft ? w : 0, 0, isLeft ? w - half : half, 0);
+            grad = QLinearGradient(0, isLeft ? 0 : h, 0, isLeft ? half : h - half);
         else
-            grad = QLinearGradient(0, isLeft ? h : 0, 0, isLeft ? h - half : half);
+            grad = QLinearGradient(isLeft ? 0 : w, h, isLeft ? half : w - half, h);
         grad.setColorAt(0.0, g0);
         grad.setColorAt(0.5, g1);
         grad.setColorAt(1.0, g2);
@@ -72,14 +73,21 @@ void SolidEffect::render(QPainter &p, const QRectF &rect,
         p.drawPath(path);
     };
 
-    drawFill(left, -1.0, true);
-    drawFill(right, 1.0, false);
-
-    if (half > 2) {
-        p.setPen(QPen(QColor(255, 255, 255, 20), 1));
-        if (vertical)
-            p.drawLine(QPointF(half, 0), QPointF(half, h));
-        else
+    if (vertical) {
+        drawFill(left, true, true);
+        drawFill(right, false, true);
+        double half = h * 0.5;
+        if (half > 2) {
+            p.setPen(QPen(QColor(255, 255, 255, 20), 1));
             p.drawLine(QPointF(0, half), QPointF(w, half));
+        }
+    } else {
+        drawFill(left, true, false);
+        drawFill(right, false, false);
+        double half = w * 0.5;
+        if (half > 2) {
+            p.setPen(QPen(QColor(255, 255, 255, 20), 1));
+            p.drawLine(QPointF(half, 0), QPointF(half, h));
+        }
     }
 }

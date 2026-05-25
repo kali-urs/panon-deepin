@@ -15,11 +15,11 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
 
     double w = rect.width();
     double h = rect.height();
-    double half = vertical ? w * 0.5 : h * 0.5;
     int n = std::min(32, static_cast<int>(left.size()));
 
-    auto drawBeams = [&](const QVector<double> &data, bool isLeft) {
-        double step = vertical ? h / n : w / n;
+    auto drawBeams = [&](const QVector<double> &data, bool isLeft, bool vertical) {
+        double half = vertical ? h * 0.5 : w * 0.5;
+        double step = vertical ? half / n : half / n;
         double gap = step * 0.2;
 
         for (int i = 0; i < n; ++i) {
@@ -33,25 +33,17 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
 
             QPainterPath beam;
             if (vertical) {
-                double barX, barY = i * step + gap / 2;
-                double barH = step - gap;
-                if (isLeft) {
-                    barX = w - val * half * 0.9;
-                    beam.addRoundedRect(QRectF(barX, barY, w - barX, barH), 0, 2);
-                } else {
-                    barX = 0;
-                    beam.addRoundedRect(QRectF(0, barY, val * half * 0.9, barH), 0, 2);
-                }
+                double barH = std::max(1.0, step - gap);
+                double barY = isLeft ? i * step + gap / 2
+                                     : h - (i * step + gap / 2) - barH;
+                double barW = val * w * 0.9;
+                beam.addRoundedRect(QRectF(0, barY, barW, barH), 0, 2);
             } else {
-                double barX = i * step + gap / 2;
                 double barW = std::max(1.0, step - gap);
-                if (isLeft) {
-                    double barH = val * half * 0.9;
-                    beam.addRoundedRect(QRectF(barX, h - barH, barW, barH), 2, 0);
-                } else {
-                    double barH = val * half * 0.9;
-                    beam.addRoundedRect(QRectF(barX, 0, barW, barH), 2, 0);
-                }
+                double barX = isLeft ? i * step + gap / 2
+                                     : w - (i * step + gap / 2) - barW;
+                double barH = val * h * 0.9;
+                beam.addRoundedRect(QRectF(barX, h - barH, barW, barH), 2, 0);
             }
 
             QColor glow = color;
@@ -63,6 +55,6 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
         }
     };
 
-    drawBeams(left, true);
-    drawBeams(right, false);
+    drawBeams(left, true, vertical);
+    drawBeams(right, false, vertical);
 }

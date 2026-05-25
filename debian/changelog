@@ -1,7 +1,13 @@
+dde-dock-panon (1.0.3-1) unstable; urgency=medium
+
+  * All effects: switched from top-bottom to left-right channel mirroring
+  * Default width changed from 200px to 150px
+  * Fix: std::min type deduction conflict (int vs qsizetype) on GCC 12
+
+ -- kali-urs <kali-urs@users.noreply.github.com>  Mon, 25 May 2026 12:00:00 +0800
+
 dde-dock-panon (1.0-1) unstable; urgency=medium
 
-  * Initial release for Deepin 25 (DDE 7.0).
-  * 6 visual effects: Bars, Wave, Solid, Beam, Hill, Spectrogram.
-  * Reference: rbn42/panon (KDE Plasma audio visualizer).
+  * Initial release.
 
  -- kali-urs <kali-urs@users.noreply.github.com>  Sun, 24 May 2026 00:00:00 +0800
