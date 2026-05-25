@@ -6,7 +6,6 @@ Build-Depends:
  cmake,
  pkg-config,
  qt6-base-dev,
- libpulse-dev,
  dde-dock-dev,
  debhelper-compat (= 13)
 Standards-Version: 4.6.2
@@ -16,10 +15,11 @@ Package: dde-dock-panon
 Architecture: any
 Depends:
  ${shlibs:Depends},
- ${misc:Depends}
+ ${misc:Depends},
+ pulseaudio-utils
 Description: Audio spectrum visualizer plugin for Deepin 25 dock
  A real-time audio spectrum analyzer plugin for the Deepin Desktop
- Environment dock. Captures system audio via PulseAudio and renders
+ Environment dock. Captures system audio via pactl/parec and renders
  6 visual effects: Bars, Wave, Solid, Beam, Hill, Spectrogram.
  .
  Reference: https://github.com/rbn42/panon

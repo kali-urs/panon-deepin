@@ -5,8 +5,8 @@
 #include <QThread>
 #include <QVector>
 #include <QAtomicInt>
-#include <pulse/simple.h>
-#include <pulse/error.h>
+#include <QProcess>
+#include <cstdint>
 
 class AudioSource : public QThread
 {
@@ -36,13 +36,15 @@ protected:
 
 private:
     QString findMonitorSourceName();
+    bool startCaptureTool();
     bool m_running = false;
     QAtomicInt m_stopFlag;
-    pa_simple *m_paSimple = nullptr;
+    QProcess *m_process = nullptr;
     QString m_sourceName;
     int m_sampleRate = 44100;
     int m_channels = 2;
     int m_bufferSize = 1024;
+    int m_sampleSize = 2;
 };
 
 #endif

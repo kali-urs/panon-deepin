@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(PkgConfig REQUIRED)
 
-pkg_check_modules(PULSEAUDIO REQUIRED libpulse libpulse-simple)
+pkg_check_modules(PULSEAUDIO QUIET libpulse libpulse-simple)
 pkg_check_modules(DDE_DOCK REQUIRED dde-dock)
 
 add_library(panon MODULE
@@ -26,14 +26,12 @@ add_library(panon MODULE
 
 target_include_directories(panon PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${PULSEAUDIO_INCLUDE_DIRS}
     ${DDE_DOCK_INCLUDE_DIRS}
 )
 
 target_link_libraries(panon PRIVATE
     Qt6::Core
     Qt6::Widgets
-    ${PULSEAUDIO_LIBRARIES}
 )
 
 install(TARGETS panon LIBRARY DESTINATION /usr/lib/dde-dock/plugins/)

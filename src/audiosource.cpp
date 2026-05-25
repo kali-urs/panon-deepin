@@ -1,6 +1,8 @@
 #include "audiosource.h"
 #include <QDebug>
 #include <QProcess>
+#include <QFileInfo>
+#include <QFile>
 #include <cmath>
 
 AudioSource::AudioSource(QObject *parent)
@@ -105,36 +107,18 @@ QString AudioSource::findMonitorSourceName()
     return "auto_null.monitor";
 }
 
+static bool canExec(const QString &name)
+{
+    return QFileInfo::exists("/usr/bin/" + name)
+        || QFileInfo::exists("/bin/" + name);
+}
+
 bool AudioSource::startCapture()
 {
     if (m_running) return true;
 
     m_sourceName = findMonitorSourceName();
-    qDebug() << "AudioSource: using monitor source:" << m_sourceName;
-
-    pa_sample_spec ss;
-    ss.format = PA_SAMPLE_S16LE;
-    ss.rate = m_sampleRate;
-    ss.channels = m_channels;
-
-    int error;
-    m_paSimple = pa_simple_new(
-        nullptr,
-        "Panon",
-        PA_STREAM_RECORD,
-        m_sourceName.toUtf8().constData(),
-        "audio capture",
-        &ss,
-        nullptr,
-        nullptr,
-        &error
-    );
-
-    if (!m_paSimple) {
-        qWarning() << "AudioSource: pa_simple_new failed:"
-                    << pa_strerror(error);
-        return false;
-    }
+    qDebug() << "AudioSource: using source:" << m_sourceName;
 
     m_stopFlag.storeRelaxed(0);
     m_running = true;
@@ -145,16 +129,19 @@ bool AudioSource::startCapture()
 void AudioSource::stopCapture()
 {
     m_stopFlag.storeRelaxed(1);
+
+    if (m_process) {
+        m_process->kill();
+        m_process->waitForFinished(2000);
+        delete m_process;
+        m_process = nullptr;
+    }
+
     m_running = false;
 
     if (isRunning()) {
         quit();
         wait(2000);
-    }
-
-    if (m_paSimple) {
-        pa_simple_free(m_paSimple);
-        m_paSimple = nullptr;
     }
 }
 
@@ -165,22 +152,75 @@ bool AudioSource::switchSource(const QString &name)
     return startCapture();
 }
 
+static QByteArray readAll(QProcess *p, int bytes)
+{
+    while (p->bytesAvailable() < bytes) {
+        if (p->state() != QProcess::Running)
+            return {};
+        if (!p->waitForReadyRead(100))
+            return {};
+    }
+    return p->read(bytes);
+}
+
 void AudioSource::run()
 {
-    int16_t rawBuf[m_bufferSize * m_channels];
+    const int frameBytes = m_bufferSize * m_channels * m_sampleSize;
+
+    // Try parec first, then pw-record
+    QString tool;
+    QStringList args;
+
+    if (canExec("parec")) {
+        tool = "parec";
+        args = {"--format=s16le", "--rate=44100", "--channels=2",
+                "--device=" + m_sourceName, "--latency-msec=20"};
+    } else if (canExec("pw-record")) {
+        tool = "pw-record";
+        args = {"--format=s16", "--rate=44100", "--channels=2",
+                "--latency=20msec", "/dev/stdout"};
+    } else {
+        qWarning() << "AudioSource: neither parec nor pw-record found";
+        m_running = false;
+        return;
+    }
+
+    qDebug() << "AudioSource: starting" << tool << args;
+
+    m_process = new QProcess;
+    m_process->start(tool, args);
+    if (!m_process->waitForStarted(5000)) {
+        qWarning() << "AudioSource: failed to start" << tool << m_process->errorString();
+        m_running = false;
+        return;
+    }
+
+    // pw-record writes a WAV header (44 bytes); skip it
+    if (tool == "pw-record") {
+        QByteArray header = readAll(m_process, 44);
+        if (header.size() < 44)
+            qWarning() << "AudioSource: short WAV header read";
+    }
+
     QVector<double> samples(m_bufferSize);
 
     while (!m_stopFlag.loadRelaxed()) {
-        int error;
-        if (pa_simple_read(m_paSimple, rawBuf, sizeof(rawBuf), &error) < 0) {
-            qWarning() << "AudioSource: read error:" << pa_strerror(error);
+        if (m_process->state() != QProcess::Running) {
+            qWarning() << "AudioSource: process exited";
             break;
         }
 
+        QByteArray data = readAll(m_process, frameBytes);
+        if (data.size() < frameBytes) {
+            if (data.isEmpty()) continue;
+            data.resize(frameBytes);
+        }
+
+        const int16_t *buf = reinterpret_cast<const int16_t *>(data.constData());
         for (int i = 0; i < m_bufferSize; ++i) {
             int sum = 0;
             for (int ch = 0; ch < m_channels; ++ch) {
-                sum += rawBuf[i * m_channels + ch];
+                sum += buf[i * m_channels + ch];
             }
             samples[i] = sum / (double)(m_channels * 32768);
         }
@@ -189,5 +229,9 @@ void AudioSource::run()
         emit waveformReady(samples);
     }
 
+    m_process->kill();
+    m_process->waitForFinished(1000);
+
+    qDebug() << "AudioSource: capture stopped";
     m_running = false;
 }
