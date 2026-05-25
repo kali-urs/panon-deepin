@@ -113,6 +113,24 @@ static bool canExec(const QString &name)
         || QFileInfo::exists("/bin/" + name);
 }
 
+static QByteArray readAll(QProcess *p, int bytes)
+{
+    while (p->bytesAvailable() < bytes) {
+        if (p->state() != QProcess::Running)
+            return {};
+        if (!p->waitForReadyRead(100))
+            return {};
+    }
+    return p->read(bytes);
+}
+
+static QString sinkNameFromMonitor(const QString &monitorName)
+{
+    if (monitorName.endsWith(".monitor"))
+        return monitorName.left(monitorName.size() - 8);
+    return monitorName;
+}
+
 bool AudioSource::startCapture()
 {
     if (m_running) return true;
@@ -152,61 +170,47 @@ bool AudioSource::switchSource(const QString &name)
     return startCapture();
 }
 
-static QByteArray readAll(QProcess *p, int bytes)
-{
-    while (p->bytesAvailable() < bytes) {
-        if (p->state() != QProcess::Running)
-            return {};
-        if (!p->waitForReadyRead(100))
-            return {};
-    }
-    return p->read(bytes);
-}
-
 void AudioSource::run()
 {
     const int frameBytes = m_bufferSize * m_channels * m_sampleSize;
 
-    // Try parec first, then pw-record
-    QString tool;
-    QStringList args;
-
-    if (canExec("parec")) {
-        tool = "parec";
-        args = {"--format=s16le", "--rate=44100", "--channels=2",
-                "--device=" + m_sourceName, "--latency-msec=20"};
-    } else if (canExec("pw-record")) {
-        tool = "pw-record";
-        args = {"--format=s16", "--rate=44100", "--channels=2",
-                "--latency=20msec", "/dev/stdout"};
-    } else {
-        qWarning() << "AudioSource: neither parec nor pw-record found";
+    // Use pw-record (native PipeWire) — avoids PulseAudio compat layer which breaks audio
+    if (!canExec("pw-record")) {
+        qWarning() << "AudioSource: pw-record not found, install pipewire-bin";
         m_running = false;
         return;
     }
 
-    qDebug() << "AudioSource: starting" << tool << args;
+    QString target = sinkNameFromMonitor(m_sourceName);
+    QStringList args = {"--format=s16", "--rate=44100", "--channels=2",
+                        "--latency=20msec", "--target=" + target, "/dev/stdout"};
+
+    qDebug() << "AudioSource: starting pw-record with args:" << args;
 
     m_process = new QProcess;
-    m_process->start(tool, args);
+    m_process->start("pw-record", args);
     if (!m_process->waitForStarted(5000)) {
-        qWarning() << "AudioSource: failed to start" << tool << m_process->errorString();
-        m_running = false;
-        return;
+        qWarning() << "AudioSource: pw-record failed to start, trying without --target";
+        // Retry without target (use default source)
+        args.removeAt(3);
+        m_process->start("pw-record", args);
+        if (!m_process->waitForStarted(5000)) {
+            qWarning() << "AudioSource: pw-record failed:" << m_process->errorString();
+            m_running = false;
+            return;
+        }
     }
 
-    // pw-record writes a WAV header (44 bytes); skip it
-    if (tool == "pw-record") {
-        QByteArray header = readAll(m_process, 44);
-        if (header.size() < 44)
-            qWarning() << "AudioSource: short WAV header read";
-    }
+    // pw-record writes a 44-byte WAV header; skip it
+    QByteArray header = readAll(m_process, 44);
+    if (header.size() < 44)
+        qWarning() << "AudioSource: short WAV header:" << header.size();
 
     QVector<double> samples(m_bufferSize);
 
     while (!m_stopFlag.loadRelaxed()) {
         if (m_process->state() != QProcess::Running) {
-            qWarning() << "AudioSource: process exited";
+            qWarning() << "AudioSource: pw-record exited";
             break;
         }
 

@@ -16,6 +16,7 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
+ pipewire-bin,
  pulseaudio-utils
 Description: Audio spectrum visualizer plugin for Deepin 25 dock
  A real-time audio spectrum analyzer plugin for the Deepin Desktop
