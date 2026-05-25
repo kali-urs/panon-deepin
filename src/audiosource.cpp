@@ -133,6 +133,15 @@ bool AudioSource::startCapture()
     ss.channels = m_channels;
 
     int error;
+
+    int fragSize = m_bufferSize * m_channels * sizeof(int16_t);
+    pa_buffer_attr attr;
+    attr.maxlength = (uint32_t)-1;
+    attr.tlength   = (uint32_t)-1;
+    attr.prebuf    = (uint32_t)-1;
+    attr.minreq    = (uint32_t)-1;
+    attr.fragsize  = fragSize;
+
     m_paSimple = pa_simple_new(
         nullptr,
         "Panon",
@@ -141,7 +150,7 @@ bool AudioSource::startCapture()
         "audio capture",
         &ss,
         nullptr,
-        nullptr,
+        &attr,
         &error
     );
 
