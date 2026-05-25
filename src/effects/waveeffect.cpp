@@ -6,18 +6,13 @@
 WaveEffect::WaveEffect() = default;
 
 void WaveEffect::render(QPainter &p, const QRectF &rect,
-                         const QVector<double> &spectrum,
+                         const QVector<double> &,
+                         const QVector<double> &,
                          const QVector<double> &waveform,
                          bool vertical)
 {
-    p.fillRect(rect, QColor(13, 13, 26, 200));
-
-    const QVector<double> &data = waveform.isEmpty() ? spectrum : waveform;
-    if (data.size() < 2) {
-        p.setPen(QColor(100, 100, 120));
-        p.drawText(rect, Qt::AlignCenter, "No audio");
-        return;
-    }
+    const QVector<double> &data = waveform;
+    if (data.size() < 2) return;
 
     double w = rect.width();
     double h = rect.height();

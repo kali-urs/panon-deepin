@@ -34,6 +34,7 @@ public:
 
 private:
     void onSamplesReady(const QVector<double> &samples);
+    void onStereoReady(const QVector<double> &left, const QVector<double> &right);
     void onWaveformReady(const QVector<double> &waveform);
     void updateOrientation();
     void setWidth(int w);
@@ -42,7 +43,6 @@ private:
     AudioSource *m_audioSource = nullptr;
     FFTProcessor *m_fft = nullptr;
     PluginProxyInterface *m_proxyInter = nullptr;
-    QVector<double> m_lastMagnitudes;
     bool m_paused = false;
     int m_width = 200;
 };

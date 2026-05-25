@@ -6,21 +6,16 @@
 HillEffect::HillEffect() = default;
 
 void HillEffect::render(QPainter &p, const QRectF &rect,
-                          const QVector<double> &spectrum,
+                          const QVector<double> &left,
+                          const QVector<double> &,
                           const QVector<double> &,
                           bool vertical)
 {
-    p.fillRect(rect, QColor(13, 13, 26, 200));
-
-    if (spectrum.isEmpty()) {
-        p.setPen(QColor(100, 100, 120));
-        p.drawText(rect, Qt::AlignCenter, "No audio");
-        return;
-    }
+    if (left.isEmpty()) return;
 
     double w = rect.width();
     double h = rect.height();
-    int n = std::min(64, static_cast<int>(spectrum.size()));
+    int n = std::min(64, static_cast<int>(left.size()));
 
     auto gaussian = [](double dist, double sigma) {
         return std::exp(-dist * dist * sigma);
@@ -35,7 +30,7 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
             double cy = i * step + step / 2;
             double sum = 0;
             for (int j = 0; j < n; ++j) {
-                double amp = std::clamp(spectrum[j], 0.0, 1.0);
+                double amp = std::clamp(left[j], 0.0, 1.0);
                 double dist = (double)(i - j) / n * n;
                 sum += amp * gaussian(dist, 2.0);
             }
@@ -51,7 +46,7 @@ void HillEffect::render(QPainter &p, const QRectF &rect,
             double cx = i * step + step / 2;
             double sum = 0;
             for (int j = 0; j < n; ++j) {
-                double amp = std::clamp(spectrum[j], 0.0, 1.0);
+                double amp = std::clamp(left[j], 0.0, 1.0);
                 double dist = (double)(i - j) / n * n;
                 sum += amp * gaussian(dist, 2.0);
             }

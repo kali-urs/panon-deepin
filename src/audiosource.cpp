@@ -191,7 +191,9 @@ bool AudioSource::switchSource(const QString &name)
 void AudioSource::run()
 {
     int16_t rawBuf[m_bufferSize * m_channels];
-    QVector<double> samples(m_bufferSize);
+    QVector<double> mono(m_bufferSize);
+    QVector<double> left(m_bufferSize);
+    QVector<double> right(m_bufferSize);
 
     qDebug() << "AudioSource: capture thread started, buffer:" << m_bufferSize
              << "rate:" << m_sampleRate << "channels:" << m_channels;
@@ -204,15 +206,14 @@ void AudioSource::run()
         }
 
         for (int i = 0; i < m_bufferSize; ++i) {
-            int sum = 0;
-            for (int ch = 0; ch < m_channels; ++ch) {
-                sum += rawBuf[i * m_channels + ch];
-            }
-            samples[i] = sum / (double)(m_channels * 32768);
+            left[i]  = rawBuf[i * m_channels]     / 32768.0;
+            right[i] = rawBuf[i * m_channels + 1] / 32768.0;
+            mono[i]  = (left[i] + right[i]) * 0.5;
         }
 
-        emit samplesReady(samples);
-        emit waveformReady(samples);
+        emit samplesReady(mono);
+        emit stereoReady(left, right);
+        emit waveformReady(mono);
     }
 
     qDebug() << "AudioSource: capture thread stopped";

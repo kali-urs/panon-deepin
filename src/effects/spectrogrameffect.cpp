@@ -62,17 +62,12 @@ void SpectrogramEffect::addColumn(const QVector<double> &spectrum)
 }
 
 void SpectrogramEffect::render(QPainter &p, const QRectF &rect,
-                                const QVector<double> &spectrum,
+                                const QVector<double> &left,
+                                const QVector<double> &,
                                 const QVector<double> &,
                                 bool vertical)
 {
-    p.fillRect(rect, QColor(13, 13, 26, 200));
-
-    if (spectrum.isEmpty()) {
-        p.setPen(QColor(100, 100, 120));
-        p.drawText(rect, Qt::AlignCenter, "No audio");
-        return;
-    }
+    if (left.isEmpty()) return;
 
     QMutexLocker lock(&m_mutex);
 
@@ -92,7 +87,7 @@ void SpectrogramEffect::render(QPainter &p, const QRectF &rect,
     }
 
     scrollImage();
-    addColumn(spectrum);
+    addColumn(left);
     m_colCount++;
 
     if (vertical) {

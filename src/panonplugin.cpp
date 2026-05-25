@@ -59,6 +59,8 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
 
     connect(m_audioSource, &AudioSource::samplesReady,
             this, &PanonPlugin::onSamplesReady);
+    connect(m_audioSource, &AudioSource::stereoReady,
+            this, &PanonPlugin::onStereoReady);
     connect(m_audioSource, &AudioSource::waveformReady,
             this, &PanonPlugin::onWaveformReady);
 
@@ -220,28 +222,19 @@ void PanonPlugin::onWaveformReady(const QVector<double> &waveform)
     m_widget->updateWaveform(waveform);
 }
 
-void PanonPlugin::onSamplesReady(const QVector<double> &samples)
+static void processChannel(const QVector<double> &input,
+                           QVector<double> &barsOut,
+                           FFTProcessor *fft)
 {
-    static int frameCount = 0;
-    ++frameCount;
-    double maxSample = 0;
-    for (double s : samples) maxSample = std::max(maxSample, std::abs(s));
-
-    if (frameCount % 50 == 0) {
-        qDebug() << "Panon: audio level =" << maxSample;
-    }
-
-    QVector<double> windowed = samples;
+    QVector<double> windowed = input;
     FFTProcessor::applyHanningWindow(windowed);
 
     QVector<double> rawMagnitudes;
-    m_fft->process(windowed, rawMagnitudes);
+    fft->process(windowed, rawMagnitudes);
 
     int magSize = rawMagnitudes.size();
-    const int barCount = 32;
+    const int barCount = barsOut.size();
     int binSize = qMax(1, magSize / barCount);
-
-    QVector<double> smoothed(barCount);
 
     for (int i = 0; i < barCount; ++i) {
         double sum = 0;
@@ -255,17 +248,41 @@ void PanonPlugin::onSamplesReady(const QVector<double> &samples)
         double val = count > 0 ? sum / count : 0;
         val = std::sqrt(std::clamp(val * 200.0, 0.0, 1.0));
         if (val < 0.03) val = 0.03;
+        barsOut[i] = val;
+    }
+}
 
-        smoothed[i] = val;
+void PanonPlugin::onSamplesReady(const QVector<double> &samples)
+{
+    static int frameCount = 0;
+    ++frameCount;
+    double maxSample = 0;
+    for (double s : samples) maxSample = std::max(maxSample, std::abs(s));
+
+    if (frameCount % 50 == 0) {
+        qDebug() << "Panon: audio level =" << maxSample;
     }
 
-    if (frameCount <= 10) {
-        qDebug() << "Panon: first FFT values (8 bars):" << smoothed.mid(0, 8)
-                 << "raw max magnitude:" << *std::max_element(rawMagnitudes.begin(), rawMagnitudes.end())
-                 << "audio level:" << maxSample;
+    m_widget->updateWaveform(samples);
+}
+
+void PanonPlugin::onStereoReady(const QVector<double> &left, const QVector<double> &right)
+{
+    static int fftFrames = 0;
+    ++fftFrames;
+    const int barCount = 32;
+
+    QVector<double> leftBars(barCount);
+    QVector<double> rightBars(barCount);
+
+    processChannel(left, leftBars, m_fft);
+    processChannel(right, rightBars, m_fft);
+
+    if (fftFrames <= 5) {
+        qDebug() << "Panon: L bars:" << leftBars.mid(0, 4) << "R bars:" << rightBars.mid(0, 4);
     }
 
-    m_widget->updateSpectrum(smoothed);
+    m_widget->updateSpectrum(leftBars, rightBars);
 
     if (m_proxyInter) {
         m_proxyInter->itemUpdate(this, pluginName());

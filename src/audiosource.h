@@ -29,6 +29,7 @@ public:
 
 signals:
     void samplesReady(const QVector<double> &samples);
+    void stereoReady(const QVector<double> &left, const QVector<double> &right);
     void waveformReady(const QVector<double> &waveform);
 
 protected:

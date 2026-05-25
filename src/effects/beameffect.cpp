@@ -6,21 +6,16 @@
 BeamEffect::BeamEffect() = default;
 
 void BeamEffect::render(QPainter &p, const QRectF &rect,
-                          const QVector<double> &spectrum,
+                          const QVector<double> &left,
+                          const QVector<double> &,
                           const QVector<double> &,
                           bool vertical)
 {
-    p.fillRect(rect, QColor(13, 13, 26, 200));
-
-    if (spectrum.isEmpty()) {
-        p.setPen(QColor(100, 100, 120));
-        p.drawText(rect, Qt::AlignCenter, "No audio");
-        return;
-    }
+    if (left.isEmpty()) return;
 
     double w = rect.width();
     double h = rect.height();
-    int n = std::min(128, static_cast<int>(spectrum.size()));
+    int n = std::min(128, static_cast<int>(left.size()));
 
     QPainterPath fillPath;
     QPainterPath linePath;
@@ -29,8 +24,8 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
         double step = h / n;
         fillPath.moveTo(w, 0);
         for (int i = 0; i < n; ++i) {
-            int idx = (i * spectrum.size()) / n;
-            double val = std::clamp(spectrum[idx], 0.0, 1.0);
+            int idx = (i * left.size()) / n;
+            double val = std::clamp(left[idx], 0.0, 1.0);
             double x = w - val * val * w * 0.95;
             double y = i * step;
             if (i == 0) {
@@ -47,8 +42,8 @@ void BeamEffect::render(QPainter &p, const QRectF &rect,
         double step = w / n;
         fillPath.moveTo(0, h);
         for (int i = 0; i < n; ++i) {
-            int idx = (i * spectrum.size()) / n;
-            double val = std::clamp(spectrum[idx], 0.0, 1.0);
+            int idx = (i * left.size()) / n;
+            double val = std::clamp(left[idx], 0.0, 1.0);
             double x = i * step;
             double y = h - val * val * h * 0.95;
             if (i == 0) {

@@ -17,7 +17,7 @@ public:
     explicit SpectrumWidget(QWidget *parent = nullptr);
     ~SpectrumWidget() override;
 
-    void updateSpectrum(const QVector<double> &magnitudes);
+    void updateSpectrum(const QVector<double> &left, const QVector<double> &right);
     void updateWaveform(const QVector<double> &waveform);
     void setBarCount(int count);
     void setColors(const QColor &from, const QColor &to);
@@ -37,7 +37,8 @@ private:
     void initEffects();
     void deleteEffects();
 
-    QVector<double> m_spectrum;
+    QVector<double> m_spectrumLeft;
+    QVector<double> m_spectrumRight;
     QVector<double> m_waveform;
     QMutex m_mutex;
     int m_barCount = 32;

@@ -6,96 +6,102 @@
 BarEffect::BarEffect() = default;
 
 void BarEffect::render(QPainter &p, const QRectF &rect,
-                        const QVector<double> &spectrum,
+                        const QVector<double> &left,
+                        const QVector<double> &right,
                         const QVector<double> &,
                         bool vertical)
 {
-    p.fillRect(rect, QColor(13, 13, 26, 200));
-
-    if (spectrum.isEmpty()) {
-        p.setPen(QColor(100, 100, 120));
-        p.drawText(rect, Qt::AlignCenter, "No audio");
-        return;
-    }
-
-    int n = std::min(m_barCount, static_cast<int>(spectrum.size()));
-    if (m_peakHold.size() != n) {
-        m_peakHold = QVector<double>(n, 0.0);
+    int n = std::min(m_barCount, std::min(left.size(), right.size()));
+    if (m_peakHold.size() != n * 2) {
+        m_peakHold = QVector<double>(n * 2, 0.0);
     }
 
     double w = rect.width();
     double h = rect.height();
+    double half = vertical ? w * 0.5 : h * 0.5;
 
     for (int i = 0; i < n; ++i) {
-        int idx = (i * spectrum.size()) / n;
-        double val = std::clamp(spectrum[idx], 0.0, 1.0);
+        int idx = (i * left.size()) / n;
+        double lVal = std::clamp(left[idx], 0.0, 1.0);
+        double rVal = std::clamp(right[idx], 0.0, 1.0);
+        if (lVal < 0.01) lVal = 0.0;
+        if (rVal < 0.01) rVal = 0.0;
 
-        if (val < 0.01) val = 0.0;
-
-        m_peakHold[i] = std::max(m_peakHold[i] * m_decayRate, val);
+        int lPeak = i;
+        int rPeak = n + i;
+        m_peakHold[lPeak] = std::max(m_peakHold[lPeak] * m_decayRate, lVal);
+        m_peakHold[rPeak] = std::max(m_peakHold[rPeak] * m_decayRate, rVal);
 
         double t = (double)i / std::max(1, n - 1);
+        QColor lColor = lerpColor(t);
+        lColor.setAlpha(220);
+        QColor rColor = lerpColor(t);
+        rColor.setAlpha(220);
+
+        double gap = 0.15;
         double radius = 2.0;
 
-        double barW, barH, barX, barY;
         if (vertical) {
-            double barH_unit = h / n;
-            double gap = barH_unit * 0.15;
-            barH = barH_unit - gap;
-            barW = val * w * 0.92;
-            barX = w - barW;
-            barY = i * barH_unit + gap / 2;
+            double unit = h / n;
+            double barH = std::max(1.0, unit - unit * gap);
+            double barY = i * unit + gap / 2;
+
+            // Left channel from right edge inward
+            double lBarW = lVal * half * 0.92;
+            QRectF lRect(w - lBarW, barY, lBarW, barH);
+            QPainterPath lPath;
+            lPath.addRoundedRect(lRect, radius, radius);
+            p.fillPath(lPath, lColor);
+            if (m_peakHold[lPeak] > 0.01) {
+                double pw = m_peakHold[lPeak] * half * 0.92;
+                p.fillRect(QRectF(w - pw, barY, pw, 2), QColor(255, 255, 255, 180));
+            }
+
+            // Right channel from left edge inward
+            double rBarW = rVal * half * 0.92;
+            QRectF rRect(0, barY, rBarW, barH);
+            QPainterPath rPath;
+            rPath.addRoundedRect(rRect, radius, radius);
+            p.fillPath(rPath, rColor);
+            if (m_peakHold[rPeak] > 0.01) {
+                double pw = m_peakHold[rPeak] * half * 0.92;
+                p.fillRect(QRectF(0, barY, pw, 2), QColor(255, 255, 255, 180));
+            }
         } else {
-            double barW_unit = w / n;
-            double gap = barW_unit * 0.15;
-            barW = std::max(1.0, barW_unit - gap);
-            barH = val * h * 0.92;
-            barX = i * barW_unit + gap / 2;
-            barY = h - barH;
-        }
+            double unit = w / n;
+            double barW = std::max(1.0, unit - unit * gap);
+            double barX = i * unit + gap / 2;
 
-        QColor barColor = lerpColor(t);
-        barColor.setAlpha(220);
+            // Left channel from bottom upward
+            double lBarH = lVal * half * 0.92;
+            QRectF lRect(barX, h - lBarH, barW, lBarH);
+            QPainterPath lPath;
+            lPath.addRoundedRect(lRect, radius, radius);
+            p.fillPath(lPath, lColor);
+            if (m_peakHold[lPeak] > 0.01) {
+                double ph = m_peakHold[lPeak] * half * 0.92;
+                p.fillRect(QRectF(barX, h - ph, barW, 2), QColor(255, 255, 255, 180));
+            }
 
-        QPainterPath barPath;
-        if (vertical) {
-            barPath.addRoundedRect(QRectF(barX, barY, barW, barH), 0, radius);
-        } else {
-            barPath.addRoundedRect(QRectF(barX, barY, barW, barH), radius, 0);
-        }
-        p.fillPath(barPath, barColor);
-
-        QColor glowColor = barColor;
-        glowColor.setAlpha(60);
-        p.setPen(QPen(glowColor, 4));
-        p.setBrush(Qt::NoBrush);
-        if (vertical) {
-            p.drawRoundedRect(QRectF(barX - 2, barY, barW + 4, barH), 0, radius);
-        } else {
-            p.drawRoundedRect(QRectF(barX, barY - 2, barW, barH + 4), radius, 0);
-        }
-
-        if (m_peakHold[i] > 0.01) {
-            double peakX, peakY, peakW, peakH;
-            if (vertical) {
-                peakW = m_peakHold[i] * w * 0.92;
-                peakX = w - peakW;
-                peakY = barY;
-                peakH = barH;
-                QColor peakColor(255, 255, 255, 180);
-                p.fillRect(QRectF(peakX, peakY, 2, peakH), peakColor);
-                QColor peakGlow(255, 255, 255, 60);
-                p.fillRect(QRectF(peakX - 1, peakY, 4, peakH), peakGlow);
-            } else {
-                peakH = m_peakHold[i] * h * 0.92;
-                peakY = h - peakH;
-                peakX = barX;
-                peakW = barW;
-                QColor peakColor(255, 255, 255, 180);
-                p.fillRect(QRectF(peakX, peakY, peakW, 2), peakColor);
-                QColor peakGlow(255, 255, 255, 60);
-                p.fillRect(QRectF(peakX, peakY - 1, peakW, 4), peakGlow);
+            // Right channel from top downward
+            double rBarH = rVal * half * 0.92;
+            QRectF rRect(barX, 0, barW, rBarH);
+            QPainterPath rPath;
+            rPath.addRoundedRect(rRect, radius, radius);
+            p.fillPath(rPath, rColor);
+            if (m_peakHold[rPeak] > 0.01) {
+                double ph = m_peakHold[rPeak] * half * 0.92;
+                p.fillRect(QRectF(barX, 0, barW, 2), QColor(255, 255, 255, 180));
             }
         }
+    }
+
+    // Center separator
+    if (half > 2) {
+        p.setPen(QPen(QColor(255, 255, 255, 25), 1));
+        if (vertical)
+            p.drawLine(QPointF(half, 0), QPointF(half, h));
+        else
+            p.drawLine(QPointF(0, half), QPointF(w, half));
     }
 }

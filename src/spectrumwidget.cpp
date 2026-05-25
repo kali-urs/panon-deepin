@@ -40,10 +40,11 @@ void SpectrumWidget::deleteEffects()
     m_effects.clear();
 }
 
-void SpectrumWidget::updateSpectrum(const QVector<double> &magnitudes)
+void SpectrumWidget::updateSpectrum(const QVector<double> &left, const QVector<double> &right)
 {
     QMutexLocker lock(&m_mutex);
-    m_spectrum = magnitudes;
+    m_spectrumLeft = left;
+    m_spectrumRight = right;
     update();
 }
 
@@ -108,5 +109,5 @@ void SpectrumWidget::paintEvent(QPaintEvent *)
     effect->setColorFrom(m_colorFrom);
     effect->setColorTo(m_colorTo);
 
-    effect->render(p, rect(), m_spectrum, m_waveform, m_vertical);
+    effect->render(p, rect(), m_spectrumLeft, m_spectrumRight, m_waveform, m_vertical);
 }
