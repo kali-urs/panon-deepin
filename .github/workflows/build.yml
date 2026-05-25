@@ -34,16 +34,28 @@ jobs:
             debhelper-compat
           rm -rf /var/lib/apt/lists/*
 
-      - name: Build .deb package
+      - name: Build .deb package with verbose logging
         run: |
-          dpkg-buildpackage -b -us -uc --no-sign
+          dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload build logs (even on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-debug-logs
+          path: /tmp/build.log
+          compression-level: 0
+          overwrite: true
+
+      - name: List package (if build succeeded)
+        run: |
           mkdir -p deb-pkg
-          mv ../*.deb ../*.buildinfo ../*.changes deb-pkg/ 2>/dev/null || true
+          mv ../*.deb deb-pkg/ 2>/dev/null || true
 
-      - name: List package
-        run: dpkg-deb --info deb-pkg/*.deb 2>/dev/null || true
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload deb package
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
           name: deb-package
           path: deb-pkg/*.deb

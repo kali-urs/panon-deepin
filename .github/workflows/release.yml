@@ -29,9 +29,22 @@ jobs:
             build-essential fakeroot debhelper-compat
           rm -rf /var/lib/apt/lists/*
 
-      - name: Build .deb
+      - name: Build .deb with logging
         run: |
-          dpkg-buildpackage -b -us -uc --no-sign
+          dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/release-build.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload build logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-logs
+          path: /tmp/release-build.log
+          compression-level: 0
+
+      - name: Prepare release artifacts (on success)
+        if: success()
+        run: |
           mkdir -p release-artifacts
           mv ../*.deb release-artifacts/ 2>/dev/null || true
 
