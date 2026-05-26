@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Install git
-        run: apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+        run: apt-get update && apt-get install -y git
 
       - uses: actions/checkout@v4
 
@@ -35,61 +35,22 @@ jobs:
             curl
           rm -rf /var/lib/apt/lists/*
 
-      - name: debian/rules build (compile step only)
+      - name: Build .deb package
         run: |
           set -o pipefail
-          debian/rules build 2>&1 | tee /tmp/build-1.log
+          dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
 
-      - name: debian/rules binary (package step)
-        run: |
-          set -o pipefail
-          fakeroot debian/rules binary 2>&1 | tee /tmp/build-2.log
-
-      - name: Print build errors as annotations
-        if: failure()
-        run: |
-          if [ -f /tmp/build-1.log ]; then
-            tail -50 /tmp/build-1.log | while IFS= read -r line; do
-              echo "::error file=build1.log,title=compile-tail::${line:0:500}"
-            done
-          fi
-          if [ -f /tmp/build-2.log ]; then
-            tail -50 /tmp/build-2.log | while IFS= read -r line; do
-              echo "::error file=build2.log,title=package-tail::${line:0:500}"
-            done
-          fi
-
-      - name: Create issue with build error
+      - name: Report build error as issue
         if: failure()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f /tmp/build-1.log ]; then
-            BODY=$(tail -100 /tmp/build-1.log | python3 -c "import sys,json; print(json.dumps({'title':'⚠️ Build Failed ' + '${{ github.ref_name }}', 'body':'Build error log:\n```\n' + sys.stdin.read()[-6000:] + '\n```'}))")
-            curl -s -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              https://api.github.com/repos/${{ github.repository }}/issues \
-              -d "$BODY"
-          fi
-
-      - name: Upload build log 1
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build1-log
-          path: /tmp/build-1.log
-          compression-level: 0
-          overwrite: true
-
-      - name: Upload build log 2
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build2-log
-          path: /tmp/build-2.log
-          compression-level: 0
-          overwrite: true
+          BODY=$(tail -100 /tmp/build.log | python3 -c "import sys,json; print(json.dumps({'title':'Build Failed ' + '${{ github.ref_name }}', 'body':'\`\`\`\n' + sys.stdin.read()[-6000:] + '\n\`\`\`'}))")
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/issues \
+            -d "$BODY"
 
       - name: List package
         run: |

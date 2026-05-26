@@ -16,41 +16,36 @@ jobs:
 
     steps:
       - name: Install git
-        run: apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+        run: apt-get update && apt-get install -y git
 
       - uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
-          apt-get update
-          apt-get install -y \
+          apt-get update && apt-get install -y \
             cmake pkg-config qt6-base-dev libpulse-dev \
             dde-dock-dev \
             build-essential fakeroot debhelper-compat curl
           rm -rf /var/lib/apt/lists/*
 
-      - name: Build .deb with logging
-        shell: bash
+      - name: Build .deb package
         run: |
           set -o pipefail
-          dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/release-build.log
+          dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
 
-      - name: Print build error (debug)
+      - name: Report build error as issue
         if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Last 60 lines of build log ==="
-          tail -60 /tmp/release-build.log
-          echo "=== End of build log ==="
+          BODY=$(tail -100 /tmp/build.log | python3 -c "import sys,json; print(json.dumps({'title':'Release Build Failed ${{ github.ref_name }}', 'body':'\`\`\`\n' + sys.stdin.read()[-6000:] + '\n\`\`\`'}))")
+          curl -s -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/issues \
+            -d "$BODY"
 
-      - name: Upload build logs (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-build-logs
-          path: /tmp/release-build.log
-          compression-level: 0
-
-      - name: Prepare release artifacts (on success)
+      - name: Prepare release artifacts
         if: success()
         run: |
           mkdir -p release-artifacts
@@ -70,9 +65,12 @@ jobs:
 
             Audio spectrum visualizer dock plugin for Deepin 25.
 
-            ### Install
+            ### Manual Install
             ```bash
             sudo apt install ./dde-dock-panon_*.deb
             pkill dde-dock
             ```
+
+            ### Auto-Update (v1.3.0+)
+            The plugin checks for updates via context menu. When a new version is found, it offers to download and install automatically via `pkexec`.
           files: release-artifacts/*
