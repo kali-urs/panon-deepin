@@ -63,9 +63,9 @@ jobs:
           body: |
             ## Panon ${{ github.ref_name }}
 
-            Audio spectrum visualizer dock plugin for Deepin 25.
+            Audio spectrum visualizer dock plugin for Deepin 25 (DDE 7.0).
 
-            ### Manual Install
+            ### Install
             ```bash
             sudo apt install ./dde-dock-panon_*.deb
             pkill dde-dock
@@ -73,4 +73,7 @@ jobs:
 
             ### Auto-Update (v1.3.0+)
             The plugin checks for updates via context menu. When a new version is found, it offers to download and install automatically via `pkexec`.
+
+            ### Reference Projects
+            - [KDE panon](https://github.com/KDE/panon) — original KDE plasma panel audio visualizer
           files: release-artifacts/*

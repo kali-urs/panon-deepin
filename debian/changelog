@@ -1,19 +1,21 @@
+dde-dock-panon (1.3.1-1) unstable; urgency=medium
+
+  * Boost all high-frequency bars: move freq boost before sqrt compression,
+    increase quadratic coefficient 10→12, remove ×0.7 post-normalization
+  * Lower noise floor 0.03→0.01 for better high-frequency sensitivity
+  * Fix: use buttonRole() comparison instead of pointer comparison
+    (GCC 12 incomplete type error on Deepin 25)
+
+ -- kali-urs <kali-urs@users.noreply.github.com>  Tue, 26 May 2026 14:30:00 +0800
+
 dde-dock-panon (1.3.0-1) unstable; urgency=medium
 
-  * Auto-update: popup dialog on new version → auto-download .deb from GitHub → pkexec dpkg -i install
-  * Boost high-frequency gain: quadratic factor 5→10 for more visible treble
-  * New effect: 弹球 — energy bars with color mapped by intensity + bouncing ball atop each bar
-  * Auto-update: check GitHub releases for new versions, show download prompt in menu
-  * Persist settings (effect, width, color mode, audio source) via QSettings
+  * Auto-update: popup dialog → curl download → pkexec dpkg -i install
+  * New effect: 弹球 — energy bars with bouncing ball physics
+  * Auto-update checker via GitHub API version comparison
+  * Persist settings (effect, width, color mode, audio source)
   * Boost high-frequency sensitivity with quadratic frequency weighting
-  * All effects: switched from top-bottom to left-right channel mirroring
-  * Default width changed from 200px to 150px
-  * Fix: std::min type deduction conflict (int vs qsizetype) on GCC 12
+  * Switch all effects to left-right channel mirroring
+  * Default width 200px→150px
 
  -- kali-urs <kali-urs@users.noreply.github.com>  Tue, 26 May 2026 14:00:00 +0800
-
-dde-dock-panon (1.0-1) unstable; urgency=medium
-
-  * Initial release.
-
- -- kali-urs <kali-urs@users.noreply.github.com>  Sun, 24 May 2026 00:00:00 +0800
