@@ -68,7 +68,7 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
     m_fft->setFFTSize(1024);
 
     m_widget = new SpectrumWidget;
-    m_widget->setBarCount(32);
+    m_widget->setBarCount(27);
 
     m_audioSource = new AudioSource(this);
 
@@ -464,7 +464,7 @@ static void processChannel(const QVector<double> &input,
         }
         double val = count > 0 ? sum / count : 0;
         double t = (double)i / barCount;
-        val *= 1.0 + 12.0 * t * t;
+        val *= 0.3 + 12.7 * t * t;
         val = std::sqrt(std::clamp(val * 100.0, 0.0, 1.0));
         if (val < 0.01) val = 0.01;
         barsOut[i] = val;
@@ -489,7 +489,7 @@ void PanonPlugin::onStereoReady(const QVector<double> &left, const QVector<doubl
 {
     static int fftFrames = 0;
     ++fftFrames;
-    const int barCount = 32;
+    const int barCount = 27;
 
     QVector<double> leftBars(barCount);
     QVector<double> rightBars(barCount);
