@@ -15,6 +15,13 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QTimer>
+#include <QMessageBox>
+#include <QProgressDialog>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QFile>
+#include <QDir>
+#include <QProcess>
 
 
 PanonPlugin::PanonPlugin(QObject *parent)
@@ -224,7 +231,7 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
     if (m_updateChecker && m_updateChecker->hasUpdate()) {
         QJsonObject updateItem;
         updateItem["itemId"] = "open_release";
-        updateItem["itemText"] = QString("⬇ 下载 v%1").arg(m_updateVersion);
+        updateItem["itemText"] = QString("⬇ 更新到 v%1").arg(m_updateVersion);
         updateItem["isActive"] = true;
         items.append(updateItem);
     }
@@ -285,7 +292,7 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         if (m_updateChecker)
             m_updateChecker->check();
     } else if (menuId == "open_release") {
-        QDesktopServices::openUrl(QUrl("https://github.com/kali-urs/panon-deepin/releases/latest"));
+        startUpdateDownload();
     }
 }
 
@@ -321,8 +328,20 @@ void PanonPlugin::saveSettings()
 void PanonPlugin::onUpdateAvailable(const QString &latest)
 {
     m_updateVersion = latest;
-    if (m_proxyInter)
-        m_proxyInter->itemUpdate(this, pluginName());
+    if (m_updateDialogShown) return;
+    m_updateDialogShown = true;
+
+    QMessageBox msgBox(m_widget);
+    msgBox.setWindowTitle("发现新版本");
+    msgBox.setText(QString("Panon v%1 已发布！\n是否下载并自动安装？").arg(latest));
+    msgBox.setIcon(QMessageBox::Information);
+    auto *downloadBtn = msgBox.addButton("下载并安装", QMessageBox::AcceptRole);
+    msgBox.addButton("稍后提醒", QMessageBox::RejectRole);
+    msgBox.exec();
+
+    if (msgBox.clickedButton() == downloadBtn) {
+        startUpdateDownload();
+    }
 }
 
 void PanonPlugin::setUpToDate()
@@ -334,6 +353,95 @@ void PanonPlugin::setUpToDate()
 void PanonPlugin::onUpdateError(const QString &msg)
 {
     Q_UNUSED(msg);
+}
+
+void PanonPlugin::startUpdateDownload()
+{
+    if (m_downloadFile && m_downloadFile->isOpen()) {
+        QMessageBox::information(m_widget, "下载中", "更新已在下载中，请稍候。");
+        return;
+    }
+
+    m_downloadNam = new QNetworkAccessManager(this);
+
+    m_downloadPath = QDir::tempPath() + "/dde-dock-panon_update.deb";
+    m_downloadFile = new QFile(m_downloadPath, this);
+    if (!m_downloadFile->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(m_widget, "下载失败", "无法创建临时文件:\n" + m_downloadPath);
+        return;
+    }
+
+    m_progressDlg = new QProgressDialog("正在下载 Panon v" + m_updateVersion + " ...", "取消", 0, 100, m_widget);
+    m_progressDlg->setWindowTitle("下载更新");
+    m_progressDlg->setAutoClose(true);
+    m_progressDlg->setAutoReset(true);
+    m_progressDlg->show();
+
+    QNetworkRequest req(QUrl(m_updateChecker->downloadUrl()));
+    req.setRawHeader("Accept", "application/octet-stream");
+    req.setRawHeader("User-Agent", "panon-deepin-updater");
+
+    QNetworkReply *reply = m_downloadNam->get(req);
+
+    connect(reply, &QNetworkReply::downloadProgress, this, &PanonPlugin::onDownloadProgress);
+    connect(reply, &QNetworkReply::finished, this, &PanonPlugin::onDownloadFinished);
+    connect(m_progressDlg, &QProgressDialog::canceled, reply, &QNetworkReply::abort);
+}
+
+void PanonPlugin::onDownloadProgress(qint64 received, qint64 total)
+{
+    if (total > 0) {
+        m_progressDlg->setMaximum(static_cast<int>(total));
+        m_progressDlg->setValue(static_cast<int>(received));
+    }
+}
+
+void PanonPlugin::onDownloadFinished()
+{
+    auto *reply = qobject_cast<QNetworkReply *>(sender());
+    if (!reply) return;
+    reply->deleteLater();
+
+    if (m_progressDlg) {
+        m_progressDlg->close();
+        m_progressDlg->deleteLater();
+        m_progressDlg = nullptr;
+    }
+
+    if (reply->error() != QNetworkReply::NoError) {
+        m_downloadFile->remove();
+        QMessageBox::warning(m_widget, "下载失败",
+            "下载更新失败:\n" + reply->errorString());
+        return;
+    }
+
+    m_downloadFile->write(reply->readAll());
+    m_downloadFile->flush();
+    m_downloadFile->close();
+
+    QMessageBox::StandardButton btn = QMessageBox::question(m_widget, "安装更新",
+        "Panon v" + m_updateVersion + " 已下载完成，是否立即安装？\n"
+        "安装需要管理员权限，Deepin 将弹出授权对话框。\n"
+        "安装后任务栏将自动重启。",
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+    if (btn == QMessageBox::Yes) {
+        installUpdate();
+    }
+}
+
+void PanonPlugin::installUpdate()
+{
+    QProcess proc;
+    QString cmd = QString("pkexec dpkg -i \"%1\"").arg(m_downloadPath);
+    if (proc.execute("/bin/sh", QStringList{"-c", cmd}) == 0) {
+        QMessageBox::information(m_widget, "更新成功",
+            "Panon 已更新到 v" + m_updateVersion + "，任务栏即将重启。");
+        QProcess::startDetached("pkill", QStringList{"dde-dock"});
+    } else {
+        QMessageBox::warning(m_widget, "安装失败",
+            "安装失败，请手动下载安装:\n" + m_updateChecker->downloadUrl());
+    }
 }
 
 void PanonPlugin::updateOrientation()
@@ -374,7 +482,7 @@ static void processChannel(const QVector<double> &input,
         double val = count > 0 ? sum / count : 0;
         val = std::sqrt(std::clamp(val * 200.0, 0.0, 1.0));
         double t = (double)i / barCount;
-        val *= 1.0 + 5.0 * t * t;
+        val *= 1.0 + 10.0 * t * t;
         val = std::clamp(val * 0.7, 0.0, 1.0);
         if (val < 0.03) val = 0.03;
         barsOut[i] = val;

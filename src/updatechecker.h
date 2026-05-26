@@ -16,6 +16,7 @@ public:
     QString latestVersion() const { return m_latestVersion; }
     bool hasUpdate() const { return m_hasUpdate; }
     bool isChecking() const { return m_checking; }
+    QString downloadUrl() const;
 
 signals:
     void updateAvailable(const QString &latestVersion);

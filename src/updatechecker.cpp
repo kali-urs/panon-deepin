@@ -89,3 +89,9 @@ void UpdateChecker::retry()
 {
     check();
 }
+
+QString UpdateChecker::downloadUrl() const
+{
+    return QString("https://github.com/kali-urs/panon-deepin/releases/download/v%1/dde-dock-panon_%1-1_amd64.deb")
+        .arg(m_latestVersion);
+}

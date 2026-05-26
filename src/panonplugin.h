@@ -6,12 +6,16 @@
 #include <QSettings>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QFile>
 #include <pluginsiteminterface.h>
 
 class SpectrumWidget;
 class AudioSource;
 class FFTProcessor;
 class UpdateChecker;
+class QNetworkAccessManager;
+class QNetworkReply;
+class QProgressDialog;
 
 class PanonPlugin : public QObject, PluginsItemInterface
 {
@@ -48,6 +52,10 @@ private:
     void onUpdateAvailable(const QString &latest);
     void setUpToDate();
     void onUpdateError(const QString &msg);
+    void startUpdateDownload();
+    void installUpdate();
+    void onDownloadProgress(qint64 received, qint64 total);
+    void onDownloadFinished();
 
     SpectrumWidget *m_widget = nullptr;
     AudioSource *m_audioSource = nullptr;
@@ -55,9 +63,13 @@ private:
     PluginProxyInterface *m_proxyInter = nullptr;
     UpdateChecker *m_updateChecker = nullptr;
     QTimer *m_periodicCheckTimer = nullptr;
+    QNetworkAccessManager *m_downloadNam = nullptr;
+    QFile *m_downloadFile = nullptr;
+    QProgressDialog *m_progressDlg = nullptr;
     bool m_paused = false;
     int m_width = 150;
     QString m_updateVersion;
+    bool m_updateDialogShown = false;
 };
 
 #endif
