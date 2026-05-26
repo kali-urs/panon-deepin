@@ -78,19 +78,14 @@ void BallEffect::render(QPainter &p, const QRectF &rect,
 
     auto drawBar = [&](int idx, double val, double barX, double barY, double barW, double barH) {
         if (val < 0.01) val = 0;
-        QColor c = energyColor(val);
-        c.setAlpha(220);
-        QRectF r(barX, barY, barW, barH);
-        if (barH < 1 && barW < 1 && !vertical) return;
-        QPainterPath path;
-        if (vertical) {
-            if (barW < 1) return;
+        if (barW > 0.5 && barH > 0.5) {
+            QColor c = energyColor(val);
+            c.setAlpha(220);
+            QRectF r(barX, barY, barW, barH);
+            QPainterPath path;
             path.addRoundedRect(r, radius, radius);
-        } else {
-            if (barH < 1) return;
-            path.addRoundedRect(r, radius, radius);
+            p.fillPath(path, c);
         }
-        p.fillPath(path, c);
 
         double extent = vertical ? barX + barW : h - barY;
         double barCenter = vertical ? barY + barH / 2 : barX + barW / 2;
