@@ -68,7 +68,7 @@ jobs:
             ### Install
             ```bash
             sudo apt install ./dde-dock-panon_*.deb
-            pkill dde-dock
+            pkill -f trayplugin-loader
             ```
 
             ### Auto-Update (v1.3.0+)
