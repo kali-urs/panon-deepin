@@ -41,6 +41,13 @@ jobs:
           set -o pipefail
           dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
 
+      - name: Print build error (debug)
+        if: failure()
+        run: |
+          echo "=== Last 60 lines of build log ==="
+          tail -60 /tmp/build.log
+          echo "=== End of build log ==="
+
       - name: Upload build logs (even on failure)
         if: failure()
         uses: actions/upload-artifact@v4
