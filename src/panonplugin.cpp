@@ -372,9 +372,10 @@ void PanonPlugin::startUpdateDownload()
     m_progressDlg->show();
 
     m_downloadProc = new QProcess(this);
-    connect(m_downloadProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &PanonPlugin::onDownloadFinished);
-    connect(m_progressDlg, &QProgressDialog::canceled, [this]() {
+    connect(m_downloadProc, &QProcess::finished, this, [this](int exitCode, QProcess::ExitStatus) {
+        onDownloadFinished(exitCode);
+    });
+    connect(m_progressDlg, &QProgressDialog::canceled, this, [this]() {
         if (m_downloadProc) m_downloadProc->kill();
     });
 
