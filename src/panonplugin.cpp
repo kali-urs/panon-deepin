@@ -43,6 +43,7 @@ void PanonPlugin::setWidth(int w)
 {
     m_width = std::clamp(w, 50, 600);
     m_widget->setFixedWidth(m_width);
+    saveSettings();
     if (m_proxyInter)
         m_proxyInter->itemUpdate(this, pluginName());
 }
@@ -80,6 +81,8 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
     }
 
     qDebug() << "Panon: available monitor sources:" << AudioSource::listMonitorSources();
+
+    loadSettings();
 
     m_proxyInter->itemAdded(this, pluginName());
 
@@ -222,11 +225,13 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
     } else if (menuId.startsWith("effect_")) {
         bool ok = false;
         int idx = QStringView(menuId).sliced(7).toInt(&ok);
-        if (ok) m_widget->setEffect(idx);
+        if (ok) { m_widget->setEffect(idx); saveSettings(); }
     } else if (menuId == "color_static") {
         m_widget->setColorMode(SpectrumWidget::Static);
+        saveSettings();
     } else if (menuId == "color_shift") {
         m_widget->setColorMode(SpectrumWidget::Shift);
+        saveSettings();
     } else if (menuId.startsWith("width_")) {
         bool ok = false;
         int w = QStringView(menuId).sliced(6).toInt(&ok);
@@ -236,6 +241,7 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
         if (srcName != m_audioSource->currentSource()) {
             qDebug() << "Panon: switching audio source to:" << srcName;
             m_audioSource->switchSource(srcName);
+            saveSettings();
         }
     }
 }
@@ -244,6 +250,29 @@ void PanonPlugin::positionChanged(const Dock::Position position)
 {
     Q_UNUSED(position);
     updateOrientation();
+}
+
+void PanonPlugin::loadSettings()
+{
+    QSettings s("kali-urs", "panon-deepin");
+    m_width = s.value("width", 150).toInt();
+    int idx = s.value("effect", 0).toInt();
+    if (idx >= 0 && idx < m_widget->effectCount())
+        m_widget->setEffect(idx);
+    m_widget->setColorMode(static_cast<SpectrumWidget::ColorMode>(
+        s.value("colorMode", 0).toInt()));
+    QString src = s.value("source").toString();
+    if (!src.isEmpty() && src != m_audioSource->currentSource())
+        m_audioSource->switchSource(src);
+}
+
+void PanonPlugin::saveSettings()
+{
+    QSettings s("kali-urs", "panon-deepin");
+    s.setValue("width", m_width);
+    s.setValue("effect", m_widget->effectIndex());
+    s.setValue("colorMode", static_cast<int>(m_widget->colorMode()));
+    s.setValue("source", m_audioSource->currentSource());
 }
 
 void PanonPlugin::updateOrientation()

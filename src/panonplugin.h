@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QtPlugin>
+#include <QSettings>
 #include <pluginsiteminterface.h>
 
 class SpectrumWidget;
@@ -39,6 +40,8 @@ private:
     void updateOrientation();
     void setWidth(int w);
     void reapplyWidth();
+    void loadSettings();
+    void saveSettings();
 
     SpectrumWidget *m_widget = nullptr;
     AudioSource *m_audioSource = nullptr;
