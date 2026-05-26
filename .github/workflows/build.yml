@@ -59,6 +59,23 @@ jobs:
             done
           fi
 
+      - name: Push build error log to branch
+        if: failure()
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git fetch origin build-error-log 2>/dev/null || true
+          git checkout -b build-error-log
+          if [ -f /tmp/build-1.log ]; then
+            cp /tmp/build-1.log build-1-error.log
+          fi
+          if [ -f /tmp/build-2.log ]; then
+            cp /tmp/build-2.log build-2-error.log
+          fi
+          git add build-*-error.log
+          git commit -m "build error log $(date -u +%Y%m%d-%H%M%S)" 2>/dev/null || true
+          git push -f origin build-error-log
+
       - name: Upload build log 1
         if: failure()
         uses: actions/upload-artifact@v4
