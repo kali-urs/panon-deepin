@@ -283,6 +283,9 @@ static void processChannel(const QVector<double> &input,
         }
         double val = count > 0 ? sum / count : 0;
         val = std::sqrt(std::clamp(val * 200.0, 0.0, 1.0));
+        double t = (double)i / barCount;
+        val *= 1.0 + 5.0 * t * t;
+        val = std::clamp(val * 0.7, 0.0, 1.0);
         if (val < 0.03) val = 0.03;
         barsOut[i] = val;
     }
