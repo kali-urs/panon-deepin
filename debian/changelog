@@ -1,3 +1,11 @@
+dde-dock-panon (1.3.5-1) unstable; urgency=medium
+
+  * Fix auto-install: use async QProcess::start for pkexec instead of
+    blocking QProcess::execute (polkit D-Bus dialog was stuck)
+  * Defer install prompt with QTimer::singleShot after closing progress dialog
+
+ -- kali-urs <kali-urs@users.noreply.github.com>  Tue, 26 May 2026 16:30:00 +0800
+
 dde-dock-panon (1.3.4-1) unstable; urgency=medium
 
   * Restart with killall dde-shell (Deepin 25 DDE 7.0)
