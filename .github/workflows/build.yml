@@ -31,7 +31,8 @@ jobs:
             dde-dock-dev \
             build-essential \
             fakeroot \
-            debhelper-compat
+            debhelper-compat \
+            curl
           rm -rf /var/lib/apt/lists/*
 
       - name: Build .deb package with verbose logging

@@ -26,7 +26,7 @@ jobs:
           apt-get install -y \
             cmake pkg-config qt6-base-dev libpulse-dev \
             dde-dock-dev \
-            build-essential fakeroot debhelper-compat
+            build-essential fakeroot debhelper-compat curl
           rm -rf /var/lib/apt/lists/*
 
       - name: Build .deb with logging

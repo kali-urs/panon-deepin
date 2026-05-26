@@ -17,8 +17,6 @@
 #include <QTimer>
 #include <QMessageBox>
 #include <QProgressDialog>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QFile>
 #include <QDir>
 #include <QProcess>
@@ -357,67 +355,51 @@ void PanonPlugin::onUpdateError(const QString &msg)
 
 void PanonPlugin::startUpdateDownload()
 {
-    if (m_downloadFile && m_downloadFile->isOpen()) {
+    if (m_downloadProc && m_downloadProc->state() != QProcess::NotRunning) {
         QMessageBox::information(m_widget, "下载中", "更新已在下载中，请稍候。");
         return;
     }
 
-    m_downloadNam = new QNetworkAccessManager(this);
+    QString path = QDir::tempPath() + "/dde-dock-panon_update.deb";
+    QString url = m_updateChecker->downloadUrl();
 
-    m_downloadPath = QDir::tempPath() + "/dde-dock-panon_update.deb";
-    m_downloadFile = new QFile(m_downloadPath, this);
-    if (!m_downloadFile->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        QMessageBox::warning(m_widget, "下载失败", "无法创建临时文件:\n" + m_downloadPath);
-        return;
-    }
-
-    m_progressDlg = new QProgressDialog("正在下载 Panon v" + m_updateVersion + " ...", "取消", 0, 100, m_widget);
+    m_progressDlg = new QProgressDialog(
+        "正在下载 Panon v" + m_updateVersion + " ...", "取消", 0, 0, m_widget);
     m_progressDlg->setWindowTitle("下载更新");
     m_progressDlg->setAutoClose(true);
-    m_progressDlg->setAutoReset(true);
+    m_progressDlg->setAutoReset(false);
+    m_progressDlg->setMinimumDuration(0);
     m_progressDlg->show();
 
-    QNetworkRequest req(QUrl(m_updateChecker->downloadUrl()));
-    req.setRawHeader("Accept", "application/octet-stream");
-    req.setRawHeader("User-Agent", "panon-deepin-updater");
+    m_downloadProc = new QProcess(this);
+    connect(m_downloadProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, &PanonPlugin::onDownloadFinished);
+    connect(m_progressDlg, &QProgressDialog::canceled, [this]() {
+        if (m_downloadProc) m_downloadProc->kill();
+    });
 
-    QNetworkReply *reply = m_downloadNam->get(req);
-
-    connect(reply, &QNetworkReply::downloadProgress, this, &PanonPlugin::onDownloadProgress);
-    connect(reply, &QNetworkReply::finished, this, &PanonPlugin::onDownloadFinished);
-    connect(m_progressDlg, &QProgressDialog::canceled, reply, &QNetworkReply::abort);
+    m_downloadProc->start("curl", QStringList{"-L", "-o", path, url});
 }
 
-void PanonPlugin::onDownloadProgress(qint64 received, qint64 total)
+void PanonPlugin::onDownloadFinished(int exitCode)
 {
-    if (total > 0) {
-        m_progressDlg->setMaximum(static_cast<int>(total));
-        m_progressDlg->setValue(static_cast<int>(received));
-    }
-}
-
-void PanonPlugin::onDownloadFinished()
-{
-    auto *reply = qobject_cast<QNetworkReply *>(sender());
-    if (!reply) return;
-    reply->deleteLater();
-
     if (m_progressDlg) {
         m_progressDlg->close();
         m_progressDlg->deleteLater();
         m_progressDlg = nullptr;
     }
 
-    if (reply->error() != QNetworkReply::NoError) {
-        m_downloadFile->remove();
+    auto *proc = qobject_cast<QProcess *>(sender());
+    if (proc != m_downloadProc) return;
+
+    m_downloadProc = nullptr;
+
+    if (exitCode != 0) {
         QMessageBox::warning(m_widget, "下载失败",
-            "下载更新失败:\n" + reply->errorString());
+            "下载更新失败，请检查网络后重试。\n"
+            "也可手动下载:\n" + m_updateChecker->downloadUrl());
         return;
     }
-
-    m_downloadFile->write(reply->readAll());
-    m_downloadFile->flush();
-    m_downloadFile->close();
 
     QMessageBox::StandardButton btn = QMessageBox::question(m_widget, "安装更新",
         "Panon v" + m_updateVersion + " 已下载完成，是否立即安装？\n"
@@ -433,7 +415,8 @@ void PanonPlugin::onDownloadFinished()
 void PanonPlugin::installUpdate()
 {
     QProcess proc;
-    QString cmd = QString("pkexec dpkg -i \"%1\"").arg(m_downloadPath);
+    QString path = QDir::tempPath() + "/dde-dock-panon_update.deb";
+    QString cmd = QString("pkexec dpkg -i \"%1\"").arg(path);
     if (proc.execute("/bin/sh", QStringList{"-c", cmd}) == 0) {
         QMessageBox::information(m_widget, "更新成功",
             "Panon 已更新到 v" + m_updateVersion + "，任务栏即将重启。");
