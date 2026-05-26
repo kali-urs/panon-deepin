@@ -41,15 +41,15 @@ jobs:
           set -o pipefail
           dpkg-buildpackage -b -us -uc 2>&1 | tee /tmp/build.log
 
-      - name: Print build error (debug)
+      - name: Print build error (debug) — also try cmake directly
         if: failure()
         run: |
-          echo "### Build Failure Log (last 60 lines)" >> $GITHUB_STEP_SUMMARY
-          tail -60 /tmp/build.log >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Last 60 lines of build log ==="
+          echo "=== cmake configure ==="
+          cmake -B /tmp/build -S . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON 2>&1 || true
+          echo "=== make ==="
+          cmake --build /tmp/build 2>&1 || true
+          echo "=== Last 60 lines of build log ==="
           tail -60 /tmp/build.log
-          echo "=== End of build log ==="
 
       - name: Upload build logs (even on failure)
         if: failure()
