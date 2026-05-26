@@ -401,30 +401,38 @@ void PanonPlugin::onDownloadFinished(int exitCode)
         return;
     }
 
-    QMessageBox::StandardButton btn = QMessageBox::question(m_widget, "安装更新",
-        "Panon v" + m_updateVersion + " 已下载完成，是否立即安装？\n"
-        "安装需要管理员权限，Deepin 将弹出授权对话框。\n"
-        "安装后任务栏将自动重启。",
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    QTimer::singleShot(200, this, [this]() {
+        QMessageBox::StandardButton btn = QMessageBox::question(m_widget, "安装更新",
+            "Panon v" + m_updateVersion + " 已下载完成，是否立即安装？\n"
+            "安装需要管理员权限，Deepin 将弹出授权对话框。\n"
+            "安装后任务栏将自动重启。",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
 
-    if (btn == QMessageBox::Yes) {
-        installUpdate();
-    }
+        if (btn == QMessageBox::Yes) {
+            installUpdate();
+        }
+    });
 }
 
 void PanonPlugin::installUpdate()
 {
-    QProcess proc;
     QString path = QDir::tempPath() + "/dde-dock-panon_update.deb";
     QString cmd = QString("pkexec dpkg -i \"%1\"").arg(path);
-    if (proc.execute("/bin/sh", QStringList{"-c", cmd}) == 0) {
-        QMessageBox::information(m_widget, "更新成功",
-            "Panon 已更新到 v" + m_updateVersion + "，任务栏即将重启。");
-        QProcess::startDetached("killall", QStringList{"dde-shell"});
-    } else {
-        QMessageBox::warning(m_widget, "安装失败",
-            "安装失败，请手动下载安装:\n" + m_updateChecker->downloadUrl());
-    }
+
+    auto *installProc = new QProcess(this);
+    connect(installProc, &QProcess::finished, this, [this, installProc](int exitCode, QProcess::ExitStatus) {
+        installProc->deleteLater();
+        if (exitCode == 0) {
+            QMessageBox::information(m_widget, "更新成功",
+                "Panon 已更新到 v" + m_updateVersion + "，任务栏即将重启。");
+            QProcess::startDetached("killall", QStringList{"dde-shell"});
+        } else {
+            QMessageBox::warning(m_widget, "安装失败",
+                "安装失败，请手动下载安装:\n" + m_updateChecker->downloadUrl());
+        }
+    });
+
+    installProc->start("/bin/sh", QStringList{"-c", cmd});
 }
 
 void PanonPlugin::updateOrientation()
