@@ -6,7 +6,6 @@ Build-Depends:
  cmake,
  pkg-config,
  qt6-base-dev,
- libqt6network6-dev,
  libpulse-dev,
  dde-dock-dev,
  debhelper-compat (= 13)
