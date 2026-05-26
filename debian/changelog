@@ -1,3 +1,9 @@
+dde-dock-panon (1.3.4-1) unstable; urgency=medium
+
+  * Restart with killall dde-shell (Deepin 25 DDE 7.0)
+
+ -- kali-urs <kali-urs@users.noreply.github.com>  Tue, 26 May 2026 16:00:00 +0800
+
 dde-dock-panon (1.3.3-1) unstable; urgency=medium
 
   * Fix restart command: pkill dde-dock → pkill -f trayplugin-loader

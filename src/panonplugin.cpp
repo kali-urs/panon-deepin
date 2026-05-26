@@ -420,7 +420,7 @@ void PanonPlugin::installUpdate()
     if (proc.execute("/bin/sh", QStringList{"-c", cmd}) == 0) {
         QMessageBox::information(m_widget, "更新成功",
             "Panon 已更新到 v" + m_updateVersion + "，任务栏即将重启。");
-        QProcess::startDetached("pkill", QStringList{"-f", "trayplugin-loader"});
+        QProcess::startDetached("killall", QStringList{"dde-shell"});
     } else {
         QMessageBox::warning(m_widget, "安装失败",
             "安装失败，请手动下载安装:\n" + m_updateChecker->downloadUrl());
