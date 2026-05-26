@@ -336,7 +336,7 @@ void PanonPlugin::onUpdateAvailable(const QString &latest)
     msgBox.addButton("稍后提醒", QMessageBox::RejectRole);
     msgBox.exec();
 
-    if (msgBox.clickedButton() == downloadBtn) {
+    if (msgBox.clickedButton() == static_cast<QAbstractButton*>(downloadBtn)) {
         startUpdateDownload();
     }
 }
