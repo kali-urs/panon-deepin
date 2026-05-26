@@ -45,6 +45,20 @@ jobs:
           set -o pipefail
           fakeroot debian/rules binary 2>&1 | tee /tmp/build-2.log
 
+      - name: Print build errors as annotations
+        if: failure()
+        run: |
+          if [ -f /tmp/build-1.log ]; then
+            tail -50 /tmp/build-1.log | while IFS= read -r line; do
+              echo "::error file=build1.log,title=compile-tail::${line:0:500}"
+            done
+          fi
+          if [ -f /tmp/build-2.log ]; then
+            tail -50 /tmp/build-2.log | while IFS= read -r line; do
+              echo "::error file=build2.log,title=package-tail::${line:0:500}"
+            done
+          fi
+
       - name: Upload build log 1
         if: failure()
         uses: actions/upload-artifact@v4
