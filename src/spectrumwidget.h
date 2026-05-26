@@ -33,6 +33,9 @@ public:
     void setColorMode(ColorMode mode) { m_colorMode = mode; }
     ColorMode colorMode() const { return m_colorMode; }
 
+    void setDownloadProgress(int percent, bool active);
+    bool isDownloading() const { return m_downloadActive; }
+
 protected:
     void paintEvent(QPaintEvent *event) override;
     QSize sizeHint() const override { return m_vertical ? QSize(36, 150) : QSize(150, 36); }
@@ -57,6 +60,9 @@ private:
     ColorMode m_colorMode = Static;
     double m_hueShift = 0.0;
     QTimer *m_colorTimer = nullptr;
+
+    bool m_downloadActive = false;
+    int m_downloadPercent = 0;
 };
 
 #endif

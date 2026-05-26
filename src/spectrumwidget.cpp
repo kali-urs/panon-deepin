@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <QRandomGenerator>
+#include <QFontMetrics>
 
 SpectrumWidget::SpectrumWidget(QWidget *parent)
     : QWidget(parent)
@@ -110,6 +111,13 @@ void SpectrumWidget::advanceColorShift()
     update();
 }
 
+void SpectrumWidget::setDownloadProgress(int percent, bool active)
+{
+    m_downloadPercent = std::clamp(percent, 0, 100);
+    m_downloadActive = active;
+    update();
+}
+
 void SpectrumWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
@@ -125,4 +133,24 @@ void SpectrumWidget::paintEvent(QPaintEvent *)
     effect->setHueShift(m_hueShift);
 
     effect->render(p, rect(), m_spectrumLeft, m_spectrumRight, m_waveform, m_vertical);
+
+    if (m_downloadActive) {
+        int barH = 4;
+        double w = rect().width();
+        double h = rect().height();
+        double fw = w * m_downloadPercent / 100.0;
+
+        QRectF bar(0, h - barH, fw, barH);
+        p.fillRect(bar, QColor(0, 180, 255, 200));
+
+        if (w > 100) {
+            p.setPen(QColor(255, 255, 255, 180));
+            QFont f = p.font();
+            f.setPixelSize(10);
+            p.setFont(f);
+            QRectF textRect(4, h - barH - 12, w - 8, barH + 12);
+            p.drawText(textRect, Qt::AlignLeft | Qt::AlignBottom,
+                       QString::number(m_downloadPercent) + "%");
+        }
+    }
 }

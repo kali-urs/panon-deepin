@@ -19,6 +19,7 @@
 #include <QProgressDialog>
 #include <QDir>
 #include <QProcess>
+#include <QFile>
 
 
 PanonPlugin::PanonPlugin(QObject *parent)
@@ -359,8 +360,21 @@ void PanonPlugin::startUpdateDownload()
         return;
     }
 
-    QString path = QDir::tempPath() + "/dde-dock-panon_update.deb";
+    m_downloadPath = QDir::tempPath() + "/dde-dock-panon_update.deb";
     QString url = m_updateChecker->downloadUrl();
+
+    // Get content-length
+    m_downloadTotal = 0;
+    QProcess headProc;
+    headProc.start("curl", {"-sI", url});
+    if (headProc.waitForFinished(5000) && headProc.exitCode() == 0) {
+        for (const QString &line : QString(headProc.readAllStandardOutput()).split('\n')) {
+            if (line.startsWith("content-length:", Qt::CaseInsensitive)) {
+                m_downloadTotal = line.mid(15).trimmed().toLongLong();
+                break;
+            }
+        }
+    }
 
     m_progressDlg = new QProgressDialog(
         "正在下载 Panon v" + m_updateVersion + " ...", "取消", 0, 0, m_widget);
@@ -378,7 +392,19 @@ void PanonPlugin::startUpdateDownload()
         if (m_downloadProc) m_downloadProc->kill();
     });
 
-    m_downloadProc->start("curl", QStringList{"-L", "-o", path, url});
+    m_downloadProc->start("curl", QStringList{"-L", "-o", m_downloadPath, url});
+
+    if (m_downloadProgressTimer)
+        m_downloadProgressTimer->stop();
+    m_downloadProgressTimer = new QTimer(this);
+    connect(m_downloadProgressTimer, &QTimer::timeout, this, [this]() {
+        qint64 bytes = QFile(m_downloadPath).size();
+        int pct = m_downloadTotal > 0
+            ? static_cast<int>(bytes * 100 / m_downloadTotal)
+            : 0;
+        m_widget->setDownloadProgress(std::clamp(pct, 0, 100), true);
+    });
+    m_downloadProgressTimer->start(500);
 }
 
 void PanonPlugin::onDownloadFinished(int exitCode)
@@ -389,17 +415,26 @@ void PanonPlugin::onDownloadFinished(int exitCode)
         m_progressDlg = nullptr;
     }
 
+    if (m_downloadProgressTimer) {
+        m_downloadProgressTimer->stop();
+        m_downloadProgressTimer->deleteLater();
+        m_downloadProgressTimer = nullptr;
+    }
+
     auto *proc = qobject_cast<QProcess *>(sender());
     if (proc != m_downloadProc) return;
 
     m_downloadProc = nullptr;
 
     if (exitCode != 0) {
+        m_widget->setDownloadProgress(0, false);
         QMessageBox::warning(m_widget, "下载失败",
             "下载更新失败，请检查网络后重试。\n"
             "也可手动下载:\n" + m_updateChecker->downloadUrl());
         return;
     }
+
+    m_widget->setDownloadProgress(100, false);
 
     QTimer::singleShot(200, this, [this]() {
         QMessageBox::StandardButton btn = QMessageBox::question(m_widget, "安装更新",

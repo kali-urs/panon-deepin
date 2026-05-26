@@ -60,6 +60,9 @@ private:
     QTimer *m_periodicCheckTimer = nullptr;
     QProcess *m_downloadProc = nullptr;
     QProgressDialog *m_progressDlg = nullptr;
+    QTimer *m_downloadProgressTimer = nullptr;
+    qint64 m_downloadTotal = 0;
+    QString m_downloadPath;
     bool m_paused = false;
     int m_width = 150;
     QString m_updateVersion;
