@@ -63,17 +63,48 @@ jobs:
           body: |
             ## Panon ${{ github.ref_name }}
 
-            Audio spectrum visualizer dock plugin for Deepin 25 (DDE 7.0).
+            Audio spectrum visualizer dock plugin for **Deepin 25 (DDE 7.0)**.
 
-            ### Install
+            ### ✨ Features
+
+            - **7 visual effects**: 柱状 (Bars), 波形 (Wave), 实心 (Solid), 光束 (Beam), 山丘 (Hill), 频谱图 (Spectrogram), 弹球 (Bouncing Balls)
+            - Dual-channel stereo spectrum with left-right mirror rendering
+            - Real-time 幻彩 color cycling mode
+            - 27 frequency bars covering 0–24 kHz with adaptive high-frequency boost
+            - Auto-update: in-app version check → download with progress bar on spectrum → `pkexec` install
+            - Persistent settings (effect, width, color mode, audio source) across reboots
+            - Transparent background, integrates natively into the dock panel
+
+            ### 📦 Install
+
             ```bash
             sudo apt install ./dde-dock-panon_*.deb
             killall dde-shell
             ```
 
-            ### Auto-Update (v1.3.0+)
-            The plugin checks for updates via context menu. When a new version is found, it offers to download and install automatically via `pkexec`.
+            ### 📜 Changelog (v1.0 → v2.0.0)
 
-            ### Reference Projects
+            - **v1.0**: Initial release — KDE panon migration to Deepin dock plugin, BarEffect with basic spectrum
+            - **v1.0.3–v1.0.5**: Left-right channel mirror, HF boost, QSettings persistence
+            - **v1.1.0**: New BallEffect (弹球) with gravity physics
+            - **v1.2.0**: Auto-update checker via GitHub API, context menu integration
+            - **v1.3.0**: Auto-download + `pkexec dpkg -i` install, enhanced HF gain
+            - **v1.3.1**: Restructured gain chain (boost before sqrt compression, no post-normalization)
+            - **v1.3.2**: 32→27 bars, suppressed low-frequency gain
+            - **v1.3.3–v1.3.4**: Fix restart commands for Deepin 25 (trayplugin-loader → dde-shell)
+            - **v1.3.5**: Fix polkit auth dialog — async QProcess::start for pkexec
+            - **v1.3.6**: Download progress bar + percentage on spectrum widget overlay
+            - **v2.0.0**: Summary stable release
+
+            ### 🔧 Technical
+
+            - C++17 + Qt6 (Core, Widgets) + PulseAudio (`pa_simple`)
+            - Old DDE dock plugin API (`com.deepin.dock.PluginsItemInterface`)
+            - FFT: 1024-point Cooley-Tukey with Hanning window, 48 kHz sample rate
+            - Gain chain: linear boost → sqrt compression → adaptive HF weighting (`0.3 + 12.7×t²`)
+            - QProcess + curl for all HTTP operations (no Qt6::Network dependency)
+
+            ### 📚 Reference Projects
+
             - [KDE panon](https://github.com/KDE/panon) — original KDE plasma panel audio visualizer
           files: release-artifacts/*
