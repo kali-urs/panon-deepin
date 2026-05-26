@@ -1,5 +1,6 @@
-dde-dock-panon (1.0.5-1) unstable; urgency=medium
+dde-dock-panon (1.1.0-1) unstable; urgency=medium
 
+  * New effect: 弹球 — energy bars with color mapped by intensity + bouncing ball atop each bar
   * Persist settings (effect, width, color mode, audio source) via QSettings
   * Boost high-frequency sensitivity with quadratic frequency weighting
   * All effects: switched from top-bottom to left-right channel mirroring

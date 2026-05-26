@@ -22,6 +22,7 @@ add_library(panon MODULE
     src/effects/beameffect.cpp
     src/effects/hilleffect.cpp
     src/effects/spectrogrameffect.cpp
+    src/effects/balleffect.cpp
 )
 
 target_include_directories(panon PRIVATE

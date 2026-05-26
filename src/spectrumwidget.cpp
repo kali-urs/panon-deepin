@@ -5,6 +5,7 @@
 #include "effects/beameffect.h"
 #include "effects/hilleffect.h"
 #include "effects/spectrogrameffect.h"
+#include "effects/balleffect.h"
 #include <QPainter>
 #include <algorithm>
 #include <cmath>
@@ -37,6 +38,7 @@ void SpectrumWidget::initEffects()
     m_effects.append(new BeamEffect());
     m_effects.append(new HillEffect());
     m_effects.append(new SpectrogramEffect());
+    m_effects.append(new BallEffect());
 }
 
 void SpectrumWidget::deleteEffects()
