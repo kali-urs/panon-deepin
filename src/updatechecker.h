@@ -3,8 +3,8 @@
 
 #include <QObject>
 #include <QString>
-#include <QNetworkAccessManager>
 #include <QTimer>
+#include <QProcess>
 
 class UpdateChecker : public QObject
 {
@@ -24,15 +24,17 @@ signals:
     void networkError(const QString &msg);
 
 private slots:
-    void onReplyFinished();
-    void retry();
+    void onProcessFinished(int exitCode, QProcess::ExitStatus status);
 
 private:
+    void retry();
+    void parseResponse(const QByteArray &data);
+
     QString m_currentVersion;
     QString m_latestVersion;
     bool m_hasUpdate = false;
     bool m_checking = false;
-    QNetworkAccessManager *m_nam = nullptr;
+    QProcess *m_proc = nullptr;
     QTimer *m_retryTimer = nullptr;
     int m_retryCount = 0;
     static constexpr int MAX_RETRIES = 2;

@@ -17,7 +17,6 @@
 #include <QTimer>
 #include <QMessageBox>
 #include <QProgressDialog>
-#include <QFile>
 #include <QDir>
 #include <QProcess>
 

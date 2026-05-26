@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QtPlugin>
 #include <QSettings>
-#include <QUrl>
 #include <pluginsiteminterface.h>
 
 class SpectrumWidget;

@@ -1,5 +1,4 @@
 #include "updatechecker.h"
-#include <QNetworkReply>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QVersionNumber>
@@ -8,7 +7,6 @@
 UpdateChecker::UpdateChecker(const QString &currentVersion, QObject *parent)
     : QObject(parent)
     , m_currentVersion(currentVersion)
-    , m_nam(new QNetworkAccessManager(this))
 {
 }
 
@@ -17,24 +15,23 @@ void UpdateChecker::check()
     if (m_checking) return;
     m_checking = true;
 
-    QNetworkRequest req(QUrl("https://api.github.com/repos/kali-urs/panon-deepin/releases/latest"));
-    req.setRawHeader("Accept", "application/vnd.github+json");
-    req.setRawHeader("User-Agent", "panon-deepin-update-checker");
+    if (m_proc) {
+        m_proc->deleteLater();
+        m_proc = nullptr;
+    }
 
-    QNetworkReply *reply = m_nam->get(req);
-    connect(reply, &QNetworkReply::finished, this, &UpdateChecker::onReplyFinished);
+    m_proc = new QProcess(this);
+    connect(m_proc, &QProcess::finished, this, &UpdateChecker::onProcessFinished);
+
+    QString url("https://api.github.com/repos/kali-urs/panon-deepin/releases/latest");
+    m_proc->start("curl", QStringList{"-s", url});
 }
 
-void UpdateChecker::onReplyFinished()
+void UpdateChecker::onProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
-    auto *reply = qobject_cast<QNetworkReply *>(sender());
-    if (!reply) return;
-    reply->deleteLater();
-
     m_checking = false;
 
-    if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "UpdateChecker: network error:" << reply->errorString();
+    if (exitCode != 0 || status != QProcess::NormalExit) {
         if (m_retryCount < MAX_RETRIES) {
             m_retryCount++;
             if (!m_retryTimer) {
@@ -44,14 +41,24 @@ void UpdateChecker::onReplyFinished()
             }
             m_retryTimer->start(30000);
         } else {
-            emit networkError(reply->errorString());
+            emit networkError("curl failed");
         }
         return;
     }
 
     m_retryCount = 0;
 
-    QByteArray data = reply->readAll();
+    QByteArray data;
+    if (m_proc) {
+        data = m_proc->readAllStandardOutput();
+        m_proc->deleteLater();
+        m_proc = nullptr;
+    }
+    parseResponse(data);
+}
+
+void UpdateChecker::parseResponse(const QByteArray &data)
+{
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (!doc.isObject()) {
         emit networkError("invalid JSON response");
