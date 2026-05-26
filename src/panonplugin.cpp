@@ -332,11 +332,11 @@ void PanonPlugin::onUpdateAvailable(const QString &latest)
     msgBox.setWindowTitle("发现新版本");
     msgBox.setText(QString("Panon v%1 已发布！\n是否下载并自动安装？").arg(latest));
     msgBox.setIcon(QMessageBox::Information);
-    auto *downloadBtn = msgBox.addButton("下载并安装", QMessageBox::AcceptRole);
+    msgBox.addButton("下载并安装", QMessageBox::AcceptRole);
     msgBox.addButton("稍后提醒", QMessageBox::RejectRole);
     msgBox.exec();
 
-    if (msgBox.clickedButton() == static_cast<QAbstractButton*>(downloadBtn)) {
+    if (msgBox.buttonRole(msgBox.clickedButton()) == QMessageBox::AcceptRole) {
         startUpdateDownload();
     }
 }
