@@ -1,13 +1,14 @@
-dde-dock-panon (1.1.0-1) unstable; urgency=medium
+dde-dock-panon (1.2.0-1) unstable; urgency=medium
 
   * New effect: 弹球 — energy bars with color mapped by intensity + bouncing ball atop each bar
+  * Auto-update: check GitHub releases for new versions, show download prompt in menu
   * Persist settings (effect, width, color mode, audio source) via QSettings
   * Boost high-frequency sensitivity with quadratic frequency weighting
   * All effects: switched from top-bottom to left-right channel mirroring
   * Default width changed from 200px to 150px
   * Fix: std::min type deduction conflict (int vs qsizetype) on GCC 12
 
- -- kali-urs <kali-urs@users.noreply.github.com>  Mon, 25 May 2026 12:00:00 +0800
+ -- kali-urs <kali-urs@users.noreply.github.com>  Tue, 26 May 2026 12:00:00 +0800
 
 dde-dock-panon (1.0-1) unstable; urgency=medium
 

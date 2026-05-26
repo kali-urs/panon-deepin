@@ -4,11 +4,14 @@
 #include <QObject>
 #include <QtPlugin>
 #include <QSettings>
+#include <QDesktopServices>
+#include <QUrl>
 #include <pluginsiteminterface.h>
 
 class SpectrumWidget;
 class AudioSource;
 class FFTProcessor;
+class UpdateChecker;
 
 class PanonPlugin : public QObject, PluginsItemInterface
 {
@@ -42,13 +45,19 @@ private:
     void reapplyWidth();
     void loadSettings();
     void saveSettings();
+    void onUpdateAvailable(const QString &latest);
+    void setUpToDate();
+    void onUpdateError(const QString &msg);
 
     SpectrumWidget *m_widget = nullptr;
     AudioSource *m_audioSource = nullptr;
     FFTProcessor *m_fft = nullptr;
     PluginProxyInterface *m_proxyInter = nullptr;
+    UpdateChecker *m_updateChecker = nullptr;
+    QTimer *m_periodicCheckTimer = nullptr;
     bool m_paused = false;
     int m_width = 150;
+    QString m_updateVersion;
 };
 
 #endif

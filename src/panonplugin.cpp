@@ -2,6 +2,7 @@
 #include "spectrumwidget.h"
 #include "audiosource.h"
 #include "fftprocessor.h"
+#include "updatechecker.h"
 
 #include <QDebug>
 #include <QJsonDocument>
@@ -83,6 +84,20 @@ void PanonPlugin::init(PluginProxyInterface *proxyInter)
     qDebug() << "Panon: available monitor sources:" << AudioSource::listMonitorSources();
 
     loadSettings();
+
+    m_updateChecker = new UpdateChecker(PANON_VERSION, this);
+    connect(m_updateChecker, &UpdateChecker::updateAvailable,
+            this, &PanonPlugin::onUpdateAvailable);
+    connect(m_updateChecker, &UpdateChecker::upToDate,
+            this, &PanonPlugin::setUpToDate);
+    connect(m_updateChecker, &UpdateChecker::networkError,
+            this, &PanonPlugin::onUpdateError);
+
+    m_periodicCheckTimer = new QTimer(this);
+    connect(m_periodicCheckTimer, &QTimer::timeout, m_updateChecker, &UpdateChecker::check);
+    m_periodicCheckTimer->start(3600000);
+
+    QTimer::singleShot(5000, m_updateChecker, &UpdateChecker::check);
 
     m_proxyInter->itemAdded(this, pluginName());
 
@@ -200,6 +215,29 @@ const QString PanonPlugin::itemContextMenu(const QString &itemKey)
         }
     }
 
+    QJsonObject updateHeader;
+    updateHeader["itemId"] = "update_header";
+    updateHeader["itemText"] = "[更新]";
+    updateHeader["isActive"] = false;
+    items.append(updateHeader);
+
+    if (m_updateChecker && m_updateChecker->hasUpdate()) {
+        QJsonObject updateItem;
+        updateItem["itemId"] = "open_release";
+        updateItem["itemText"] = QString("⬇ 下载 v%1").arg(m_updateVersion);
+        updateItem["isActive"] = true;
+        items.append(updateItem);
+    }
+
+    {
+        QJsonObject sub;
+        sub["itemId"] = "check_update";
+        sub["itemText"] = m_updateChecker && m_updateChecker->isChecking()
+            ? "检查中…" : "检查更新";
+        sub["isActive"] = !(m_updateChecker && m_updateChecker->isChecking());
+        items.append(sub);
+    }
+
     QJsonObject quitItem;
     quitItem["itemId"] = "quit";
     quitItem["itemText"] = "退出";
@@ -243,6 +281,11 @@ void PanonPlugin::invokedMenuItem(const QString &itemKey, const QString &menuId,
             m_audioSource->switchSource(srcName);
             saveSettings();
         }
+    } else if (menuId == "check_update") {
+        if (m_updateChecker)
+            m_updateChecker->check();
+    } else if (menuId == "open_release") {
+        QDesktopServices::openUrl(QUrl("https://github.com/kali-urs/panon-deepin/releases/latest"));
     }
 }
 
@@ -273,6 +316,24 @@ void PanonPlugin::saveSettings()
     s.setValue("effect", m_widget->effectIndex());
     s.setValue("colorMode", static_cast<int>(m_widget->colorMode()));
     s.setValue("source", m_audioSource->currentSource());
+}
+
+void PanonPlugin::onUpdateAvailable(const QString &latest)
+{
+    m_updateVersion = latest;
+    if (m_proxyInter)
+        m_proxyInter->itemUpdate(this, pluginName());
+}
+
+void PanonPlugin::setUpToDate()
+{
+    if (m_proxyInter)
+        m_proxyInter->itemUpdate(this, pluginName());
+}
+
+void PanonPlugin::onUpdateError(const QString &msg)
+{
+    Q_UNUSED(msg);
 }
 
 void PanonPlugin::updateOrientation()
